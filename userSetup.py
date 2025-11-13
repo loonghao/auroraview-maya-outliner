@@ -58,27 +58,34 @@ def setup_auroraview_outliner():
     # Create a shelf button for easy access
     def create_shelf_button():
         """Create a shelf button to launch the outliner"""
+        try:
+            print("[AuroraView] Creating shelf button...")
 
-        # Get or create AuroraView shelf
-        shelf_name = "AuroraView"
-        if not cmds.shelfLayout(shelf_name, exists=True):
-            cmds.shelfLayout(shelf_name, parent="ShelfLayout")
-            print(f"[AuroraView] Created shelf: {shelf_name}")
+            # Get or create AuroraView shelf
+            shelf_name = "AuroraView"
+            if not cmds.shelfLayout(shelf_name, exists=True):
+                cmds.shelfLayout(shelf_name, parent="ShelfLayout")
+                print(f"[AuroraView] Created shelf: {shelf_name}")
+            else:
+                print(f"[AuroraView] Shelf '{shelf_name}' already exists")
 
-        # Check if button already exists
-        existing_buttons = cmds.shelfLayout(shelf_name, query=True, childArray=True) or []
-        for button in existing_buttons:
-            if cmds.shelfButton(button, query=True, label=True) == "Outliner":
-                print("[AuroraView] Shelf button already exists")
-                return
+            # Check if button already exists
+            existing_buttons = cmds.shelfLayout(shelf_name, query=True, childArray=True) or []
+            for button in existing_buttons:
+                try:
+                    if cmds.shelfButton(button, query=True, label=True) == "Outliner":
+                        print("[AuroraView] Shelf button already exists")
+                        return
+                except:
+                    pass
 
-        # Create shelf button
-        cmds.shelfButton(
-            parent=shelf_name,
-            label="Outliner",
-            annotation="Launch AuroraView Outliner",
-            image="outliner.png",
-            command=f"""
+            # Create shelf button
+            cmds.shelfButton(
+                parent=shelf_name,
+                label="Outliner",
+                annotation="Launch AuroraView Outliner",
+                image="outliner.png",
+                command=f"""
 import sys
 
 # Ensure project path is set
@@ -90,11 +97,16 @@ if project_root not in sys.path:
 from maya_integration import maya_outliner
 maya_outliner.main()
 """,
-            sourceType="python",
-        )
-        print("[AuroraView] ✓ Created shelf button: Outliner")
+                sourceType="python",
+            )
+            print("[AuroraView] ✓ Created shelf button: Outliner")
+        except Exception as e:
+            print(f"[AuroraView] ✗ Error creating shelf button: {e}")
+            import traceback
+            traceback.print_exc()
 
     # Create shelf button after Maya UI is ready
+    print("[AuroraView] Scheduling shelf creation...")
     mutils.executeDeferred(create_shelf_button)
 
     print("[AuroraView] ✓ Setup complete!")
