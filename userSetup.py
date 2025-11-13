@@ -1,12 +1,17 @@
 """
 Maya userSetup.py for AuroraView Outliner
 
-Copy this file to one of these locations to auto-load the outliner on Maya startup:
+This file is automatically copied by justfile when you run:
+    just maya-2022
+    just maya-2024
+    just maya-2025
+
+It will be placed in:
 - Windows: C:/Users/<username>/Documents/maya/<version>/scripts/userSetup.py
 - macOS: ~/Library/Preferences/Autodesk/maya/<version>/scripts/userSetup.py
 - Linux: ~/maya/<version>/scripts/userSetup.py
 
-Or set MAYA_SCRIPT_PATH environment variable to include this directory.
+The justfile will inject the correct PROJECT_ROOT path during setup.
 """
 
 import os
@@ -15,25 +20,40 @@ import sys
 import maya.utils as mutils
 from maya import cmds
 
+# This will be replaced by justfile with the actual project path
+PROJECT_ROOT = r"{{PROJECT_ROOT}}"
+
 
 def setup_auroraview_outliner():
     """Setup AuroraView Outliner on Maya startup"""
 
-    # Get the project root (2 levels up from this script)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(script_dir))
+    print("=" * 60)
+    print("AuroraView Outliner - Setup")
+    print("=" * 60)
+    print(f"Project Root: {PROJECT_ROOT}")
 
-    # Add AuroraView to Python path
-    python_dir = os.path.join(project_root, "python")
-    if python_dir not in sys.path:
-        sys.path.insert(0, python_dir)
-        print(f"[AuroraView] Added to PYTHONPATH: {python_dir}")
+    # Add maya-outliner project to Python path
+    if PROJECT_ROOT not in sys.path:
+        sys.path.insert(0, PROJECT_ROOT)
+        print(f"[AuroraView] Added to PYTHONPATH: {PROJECT_ROOT}")
 
-    # Add maya-outliner example to Python path
-    outliner_dir = os.path.join(project_root, "examples", "maya-outliner")
-    if outliner_dir not in sys.path:
-        sys.path.insert(0, outliner_dir)
-        print(f"[AuroraView] Added to PYTHONPATH: {outliner_dir}")
+    # Verify auroraview is available
+    try:
+        import auroraview
+        print(f"[AuroraView] ✓ AuroraView {getattr(auroraview, '__version__', 'dev')} loaded")
+    except ImportError as e:
+        print(f"[AuroraView] ✗ Failed to import auroraview: {e}")
+        print("[AuroraView]   Please install: mayapy -m pip install auroraview")
+        return
+
+    # Verify maya_integration is available
+    try:
+        from maya_integration import maya_outliner
+        print(f"[AuroraView] ✓ Maya integration loaded")
+    except ImportError as e:
+        print(f"[AuroraView] ✗ Failed to import maya_integration: {e}")
+        print(f"[AuroraView]   Check that PROJECT_ROOT is correct: {PROJECT_ROOT}")
+        return
 
     # Create a shelf button for easy access
     def create_shelf_button():
@@ -60,17 +80,11 @@ def setup_auroraview_outliner():
             image="outliner.png",
             command=f"""
 import sys
-import os
 
-# Ensure paths are set
-project_root = r"{project_root}"
-python_dir = os.path.join(project_root, "python")
-outliner_dir = os.path.join(project_root, "examples", "maya-outliner")
-
-if python_dir not in sys.path:
-    sys.path.insert(0, python_dir)
-if outliner_dir not in sys.path:
-    sys.path.insert(0, outliner_dir)
+# Ensure project path is set
+project_root = r"{PROJECT_ROOT}"
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 # Launch outliner
 from maya_integration import maya_outliner
@@ -78,20 +92,22 @@ maya_outliner.main()
 """,
             sourceType="python",
         )
-        print("[AuroraView] Created shelf button: Outliner")
+        print("[AuroraView] ✓ Created shelf button: Outliner")
 
     # Create shelf button after Maya UI is ready
     mutils.executeDeferred(create_shelf_button)
 
-    print("[AuroraView] Setup complete!")
+    print("[AuroraView] ✓ Setup complete!")
     print("[AuroraView] Click the 'Outliner' button on the AuroraView shelf to launch")
+    print("=" * 60)
 
 
 # Run setup when Maya starts
 try:
     setup_auroraview_outliner()
 except Exception as e:
-    print(f"[AuroraView] Error during setup: {e}")
+    print("=" * 60)
+    print(f"[AuroraView] ✗ Error during setup: {e}")
     import traceback
-
     traceback.print_exc()
+    print("=" * 60)
