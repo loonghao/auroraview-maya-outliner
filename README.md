@@ -5,7 +5,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![AuroraView](https://img.shields.io/badge/AuroraView-Rust-orange?logo=rust&logoColor=white)](../../README.md)
 
-[中文文档](./README_zh.md) | [Quick Start](./QUICKSTART.md)
+[中文文档](./README_zh.md) | [Quick Start](./QUICKSTART.md) | [Local Development](./LOCAL_DEVELOPMENT.md)
 
 A modern, web-based Maya Outliner built with **AuroraView**, **Vue 3**, and **TypeScript**. This example demonstrates how to create high-performance DCC tools with modern web technologies embedded directly in Maya.
 
@@ -126,6 +126,16 @@ This shows:
 - Project paths
 - Maya installation status
 - UserSetup installation status
+
+**Local Development Mode:**
+
+If you're developing AuroraView locally, use the `-local` suffix:
+
+```bash
+just maya-2024-local  # Use local AuroraView from custom path
+```
+
+See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) for details.
 
 **Other useful commands:**
 ```bash
