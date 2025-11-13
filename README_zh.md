@@ -5,7 +5,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![AuroraView](https://img.shields.io/badge/AuroraView-Rust-orange?logo=rust&logoColor=white)](../../README_zh.md)
 
-[English Documentation](./README.md) | [快速开始](./QUICKSTART.md)
+[English Documentation](./README.md) | [快速开始](./QUICKSTART.md) | [本地开发](./LOCAL_DEVELOPMENT.md)
 
 使用 **AuroraView**、**Vue 3** 和 **TypeScript** 构建的现代化、基于 Web 的 Maya 大纲视图。此示例演示了如何使用直接嵌入 Maya 的现代 Web 技术创建高性能 DCC 工具。
 
@@ -105,6 +105,16 @@ just info
 - 项目路径
 - Maya 安装状态
 - UserSetup 安装状态
+
+**本地开发模式：**
+
+如果你正在本地开发 AuroraView，使用 `-local` 后缀：
+
+```bash
+just maya-2024-local  # 使用自定义路径的本地 AuroraView
+```
+
+详见 [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md)。
 
 **其他有用命令：**
 ```bash
