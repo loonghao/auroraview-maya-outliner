@@ -1,11 +1,56 @@
 # Quick Start Guide
 
-## 🚀 5-Minute Setup
+## 🚀 3-Minute Setup with Justfile
+
+### Prerequisites
+
+1. **Install just command runner:**
+   - Windows: `scoop install just` or `choco install just`
+   - macOS: `brew install just`
+   - Linux: See [just installation guide](https://github.com/casey/just#installation)
+
+2. **Install AuroraView:**
+   ```bash
+   mayapy -m pip install auroraview
+   ```
+
+3. **Install frontend dependencies:**
+   ```bash
+   npm install
+   ```
+
+### Quick Launch
+
+**Step 1: Check your setup**
+```bash
+just info
+```
+
+This shows which Maya versions are installed and ready to use.
+
+**Step 2: Launch Maya**
+```bash
+# Choose your Maya version
+just maya-2022
+just maya-2024
+just maya-2025
+```
+
+**Step 3: Use the Outliner**
+- Maya will start automatically
+- Look for the "AuroraView" shelf
+- Click the "Outliner" button
+- The outliner window will open!
+
+That's it! 🎉
+
+## 🔧 Manual Setup (Alternative)
+
+If you prefer not to use justfile:
 
 ### Step 1: Install Dependencies
 
 ```bash
-cd examples/maya-outliner
 npm install
 ```
 
@@ -21,22 +66,15 @@ VITE v6.4.1  ready in 650 ms
 ➜  Local:   http://localhost:5173/
 ```
 
-### Step 3: Build AuroraView with Windows WebView2 (Optional, Windows)
-
-```bash
-# From repo root
-maturin develop --release --features win-webview2
-```
-
-### Step 4: Run in Maya
+### Step 3: Run in Maya
 
 Open Maya's Script Editor and paste:
 
 ```python
 import sys
-sys.path.append(r"C:\Users\hallo\Documents\augment-projects\dcc_webview\examples\maya-outliner")
+sys.path.append(r"C:\path\to\auroraview-maya-outliner")
 
-# Use existing outliner integration (Qt + AuroraView)
+# Launch outliner
 from maya_integration import maya_outliner
 maya_outliner.main()
 
