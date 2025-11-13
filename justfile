@@ -34,6 +34,11 @@ build:
 setup-maya-env version:
     @powershell -NoLogo -ExecutionPolicy Bypass -File "{{PROJECT_ROOT}}\setup-maya-env.ps1" -Version "{{version}}" -ProjectRoot "{{PROJECT_ROOT}}"
 
+# Setup Maya environment with local development version
+[private]
+setup-maya-env-local version:
+    @powershell -NoLogo -ExecutionPolicy Bypass -File "{{PROJECT_ROOT}}\setup-maya-env.ps1" -Version "{{version}}" -ProjectRoot "{{PROJECT_ROOT}}" -UseLocal
+
 # Launch Maya 2022 with AuroraView Outliner
 maya-2022: (setup-maya-env "2022")
     @Write-Host "Launching Maya 2022..."
@@ -47,6 +52,21 @@ maya-2024: (setup-maya-env "2024")
 # Launch Maya 2025 with AuroraView Outliner
 maya-2025: (setup-maya-env "2025")
     @Write-Host "Launching Maya 2025..."
+    @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
+
+# Launch Maya 2022 with LOCAL development version
+maya-2022-local: (setup-maya-env-local "2022")
+    @Write-Host "Launching Maya 2022 (LOCAL DEV)..."
+    @if (Test-Path "{{MAYA_2022_PATH}}") { Start-Process "{{MAYA_2022_PATH}}" } else { Write-Host "ERROR: Maya 2022 not found at {{MAYA_2022_PATH}}"; Write-Host "Please update MAYA_2022_PATH in justfile"; exit 1 }
+
+# Launch Maya 2024 with LOCAL development version
+maya-2024-local: (setup-maya-env-local "2024")
+    @Write-Host "Launching Maya 2024 (LOCAL DEV)..."
+    @if (Test-Path "{{MAYA_2024_PATH}}") { Start-Process "{{MAYA_2024_PATH}}" } else { Write-Host "ERROR: Maya 2024 not found at {{MAYA_2024_PATH}}"; Write-Host "Please update MAYA_2024_PATH in justfile"; exit 1 }
+
+# Launch Maya 2025 with LOCAL development version
+maya-2025-local: (setup-maya-env-local "2025")
+    @Write-Host "Launching Maya 2025 (LOCAL DEV)..."
     @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
 
 # Clean Maya environment (remove userSetup.py)
