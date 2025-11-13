@@ -90,23 +90,53 @@ npm install
 
 ## 🚀 Usage
 
-### Development Workflow (Recommended for Contributors)
+### Quick Start with Justfile (Recommended)
 
-**One-time setup:**
+This project includes a `justfile` for easy Maya setup and launch.
+
+**Prerequisites:**
+- Install [just](https://github.com/casey/just) command runner
+- Install AuroraView: `mayapy -m pip install auroraview`
+- Install frontend dependencies: `npm install`
+
+**Launch Maya with AuroraView Outliner:**
+
 ```bash
-just maya-setup-dev
+# For Maya 2022
+just maya-2022
+
+# For Maya 2024
+just maya-2024
+
+# For Maya 2025
+just maya-2025
 ```
 
-This creates symlinks so your code changes are immediately available in Maya.
+This will:
+1. ✅ Copy `userSetup.py` to Maya's scripts folder with correct paths
+2. ✅ Launch Maya
+3. ✅ Create "AuroraView" shelf with "Outliner" button on startup
 
-**Daily development:**
+**Check your setup:**
 ```bash
-just maya-dev
+just info
 ```
 
-This rebuilds Rust core and launches Maya. Click the "Outliner" button on the AuroraView shelf!
+This shows:
+- Project paths
+- Maya installation status
+- UserSetup installation status
 
-📖 See [QUICKSTART.md](./QUICKSTART.md) for a concise development guide
+**Other useful commands:**
+```bash
+just install          # Install npm dependencies
+just dev              # Start Vite dev server
+just build            # Build for production
+just clean-maya 2024  # Remove userSetup.py from Maya 2024
+just clean-all-maya   # Remove userSetup.py from all Maya versions
+```
+
+📖 See [QUICKSTART.md](./QUICKSTART.md) for more details
 
 ### Quick Debug Workflow (For Testing)
 

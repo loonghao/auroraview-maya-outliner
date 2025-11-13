@@ -69,53 +69,53 @@ npm install
 
 ## 🚀 使用方法
 
-### 快速调试工作流（推荐）
+### 使用 Justfile 快速开始（推荐）
 
-**使用 Just 命令：**
+本项目包含 `justfile` 配置文件，可以轻松设置和启动 Maya。
+
+**前置要求：**
+- 安装 [just](https://github.com/casey/just) 命令运行器
+- 安装 AuroraView：`mayapy -m pip install auroraview`
+- 安装前端依赖：`npm install`
+
+**启动带有 AuroraView Outliner 的 Maya：**
+
 ```bash
-just maya-debug
+# Maya 2022
+just maya-2022
+
+# Maya 2024
+just maya-2024
+
+# Maya 2025
+just maya-2025
 ```
 
-这将自动：
-1. 终止所有 Maya 进程
-2. 重新编译 Rust 核心
-3. 设置 PYTHONPATH
-4. 启动 Maya 2024
+这将会：
+1. ✅ 复制 `userSetup.py` 到 Maya 脚本文件夹并配置正确路径
+2. ✅ 启动 Maya
+3. ✅ 在启动时创建带有 "Outliner" 按钮的 "AuroraView" 工具架
 
-**使用批处理脚本：**
+**检查你的设置：**
 ```bash
-cd examples/maya-outliner
-launch_maya_debug.bat
+just info
 ```
 
-**Maya 启动时自动加载：**
-复制 `userSetup.py` 到 Maya 的脚本文件夹：
+这会显示：
+- 项目路径
+- Maya 安装状态
+- UserSetup 安装状态
+
+**其他有用命令：**
 ```bash
-# Windows
-copy userSetup.py "C:\Users\<username>\Documents\maya\2024\scripts\"
+just install          # 安装 npm 依赖
+just dev              # 启动 Vite 开发服务器
+just build            # 构建生产版本
+just clean-maya 2024  # 从 Maya 2024 移除 userSetup.py
+just clean-all-maya   # 从所有 Maya 版本移除 userSetup.py
 ```
 
-然后重启 Maya - 你会在 AuroraView 工具架上看到 "Outliner" 按钮！
-
-## 🚀 使用方法
-
-### 开发工作流（推荐给贡献者）
-
-**一次性设置：**
-```bash
-just maya-setup-dev
-```
-
-这会创建软连接，让你的代码修改立即在 Maya 中生效。
-
-**日常开发：**
-```bash
-just maya-dev
-```
-
-这会重新编译 Rust 核心并启动 Maya。点击 AuroraView 工具架上的 "Outliner" 按钮即可！
-
-📖 **查看 [DEVELOPMENT.md](DEVELOPMENT.md) 获取完整开发指南**
+📖 查看 [QUICKSTART.md](./QUICKSTART.md) 了解更多详情
 
 ### 开发模式（手动方式）
 
