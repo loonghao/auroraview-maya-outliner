@@ -11,7 +11,7 @@ MAYA_2025_PATH := "C:/Program Files/Autodesk/Maya2025/bin/maya.exe"
 
 # Project paths
 PROJECT_ROOT := justfile_directory()
-USERSETUP_FILE := PROJECT_ROOT / "userSetup.py"
+USERSETUP_FILE := PROJECT_ROOT + "\\userSetup.py"
 
 # Default recipe - show available commands
 default:
@@ -32,11 +32,7 @@ build:
 # Setup Maya environment and copy userSetup.py with PROJECT_ROOT replacement
 [private]
 setup-maya-env version:
-    @Write-Host "Setting up Maya {{version}} environment..."
-    @$scriptsDir = "$env:USERPROFILE\Documents\maya\{{version}}\scripts"; if (-not (Test-Path $scriptsDir)) { New-Item -ItemType Directory -Path $scriptsDir -Force | Out-Null }
-    @(Get-Content '{{USERSETUP_FILE}}') -replace '\{\{PROJECT_ROOT\}\}', '{{PROJECT_ROOT}}' | Set-Content "$scriptsDir\userSetup.py"
-    @Write-Host "✓ Copied userSetup.py to Maya {{version}} scripts folder"
-    @Write-Host "✓ Set PROJECT_ROOT to: {{PROJECT_ROOT}}"
+    @powershell -NoLogo -ExecutionPolicy Bypass -File "{{PROJECT_ROOT}}\setup-maya-env.ps1" -Version "{{version}}" -ProjectRoot "{{PROJECT_ROOT}}"
 
 # Launch Maya 2022 with AuroraView Outliner
 maya-2022: (setup-maya-env "2022")
