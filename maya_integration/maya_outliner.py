@@ -20,40 +20,29 @@ except ImportError:
     MAYA_AVAILABLE = False
     print("[MayaOutliner] Warning: Maya not available, using mock data")
 
-# Try Qt backend first (recommended for Maya)
-USE_QT_BACKEND = False  # Default to native backend
-QtWebView = None
-WebView = None
-EventTimer = None
+# Import AuroraView components
+try:
+    from auroraview import EventTimer, QtWebView, WebView
+
+    print("[MayaOutliner] ✓ AuroraView imported successfully")
+except ImportError as e:
+    print(f"[MayaOutliner] ✗ Failed to import auroraview: {e}")
+    print("[MayaOutliner] Make sure auroraview is installed and PYTHONPATH is set correctly")
+    raise
+
+# Import Maya Qt components for window handle
 omui = None
 wrapInstance = None
 QWidget = None
-
 try:
     import maya.OpenMayaUI as omui
     from PySide2.QtWidgets import QWidget
     from shiboken2 import wrapInstance
 
-    from auroraview import EventTimer, QtWebView
-    from auroraview import WebView as NativeWebView
-
-    # Both backends available, prefer Qt in Maya
-    WebView = NativeWebView  # Keep reference to native backend
-    USE_QT_BACKEND = True
-    print("[MayaOutliner] Qt backend available (will be used)")
-    print("[MayaOutliner] Native backend also available (fallback)")
+    print("[MayaOutliner] ✓ Maya Qt components available")
 except ImportError as e:
-    print(f"[MayaOutliner] Qt backend not available: {e}")
-    # Try native backend only
-    try:
-        from auroraview import EventTimer, WebView
-
-        USE_QT_BACKEND = False
-        print("[MayaOutliner] Using Native backend only")
-    except ImportError as e2:
-        print(f"[MayaOutliner] ERROR: Failed to import auroraview: {e2}")
-        print("[MayaOutliner] Make sure auroraview is installed and PYTHONPATH is set correctly")
-        raise
+    print(f"[MayaOutliner] ⚠ Maya Qt components not available: {e}")
+    print("[MayaOutliner] Will use standalone mode")
 
 
 class MayaOutliner:
@@ -66,19 +55,19 @@ class MayaOutliner:
     _instances: Dict[str, "MayaOutliner"] = {}
     _singleton_lock = None  # Will be initialized when needed
 
-    def __init__(self, singleton_key: Optional[str] = None):
+    def __init__(self, singleton_key: Optional[str] = None, use_qt: bool = False):
         """Initialize Maya Outliner
 
         Args:
             singleton_key: If provided, enables singleton mode with this key.
                           Only one instance per key can exist at a time.
+            use_qt: If True, use QtWebView backend. If False, use native WebView (default: False)
         """
         self.webview: Optional[Any] = None  # WebView or QtWebView
         self.callback_ids: List[Any] = []
-        self._is_embedded = False  # Track if using embedded mode
-        self._event_timer: Optional[Any] = None  # EventTimer for automatic event processing
         self._singleton_key = singleton_key
         self._is_closing = False  # Prevent re-entrant close calls
+        self._use_qt = use_qt  # Track which backend to use
 
     def get_node_type(self, node: str) -> str:
         """Get the type of a Maya node"""
@@ -273,67 +262,17 @@ class MayaOutliner:
         self.callback_ids.clear()
         print("[MayaOutliner] Maya callbacks removed")
 
-    def _start_event_processing(self):
-        """Start automatic event processing using EventTimer.
+    def _get_event_timer(self) -> Optional[Any]:
+        """Get the EventTimer from WebView if available.
 
-        This replaces the old scriptJob + QTimer approach with a unified EventTimer
-        that handles all event processing automatically.
+        The new WebView.create() API automatically creates an EventTimer
+        when auto_timer=True (default for embedded mode).
         """
-        if self.webview is None or EventTimer is None:
-            print(
-                "[MayaOutliner] Cannot start event processing (webview or EventTimer not available)"
-            )
-            return
+        if self.webview is None:
+            return None
 
-        try:
-            # Create EventTimer with 16ms interval (60 FPS)
-            self._event_timer = EventTimer(self.webview, interval_ms=16, check_window_validity=True)
-
-            # Lightweight debug throttle
-            _counter = {"n": 0}
-
-            @self._event_timer.on_tick
-            def handle_tick():
-                _counter["n"] += 1
-                if _counter["n"] <= 5 or (_counter["n"] % 60 == 0):
-                    # Print first few ticks, then every ~60 ticks (~1s @60FPS)
-                    print(f"[MayaOutliner] EventTimer tick #{_counter['n']}")
-
-            @self._event_timer.on_close
-            def handle_close():
-                print(
-                    "[MayaOutliner] Close signal detected from EventTimer -> invoking self.close()"
-                )
-                # Ensure full cleanup path executes (handles HWND force-close, registry, etc.)
-                try:
-                    self.close()
-                except Exception as e:
-                    print(f"[MayaOutliner] Error during close from EventTimer: {e}")
-
-            # Start the timer
-            self._event_timer.start()
-            print("[MayaOutliner] EventTimer started (interval=16ms, ~60 FPS)")
-
-        except Exception as e:
-            print(f"[MayaOutliner] Failed to start EventTimer: {e}")
-            import traceback
-
-            traceback.print_exc()
-
-    def _stop_event_processing(self):
-        """Stop automatic event processing (EventTimer) and cleanup resources.
-
-        Uses EventTimer.cleanup() to properly clear all references including
-        the webview reference to prevent circular references.
-        """
-        if self._event_timer is not None:
-            try:
-                # Use cleanup() instead of stop() to clear webview reference
-                self._event_timer.cleanup()
-                print("[MayaOutliner] EventTimer stopped and cleaned up")
-                self._event_timer = None
-            except Exception as e:
-                print(f"[MayaOutliner] Failed to stop EventTimer: {e}")
+        # Check if WebView has auto_timer
+        return getattr(self.webview, "_auto_timer", None)
 
     @classmethod
     def _get_or_create_singleton(cls, singleton_key: str, factory_fn) -> "MayaOutliner":
@@ -380,8 +319,6 @@ class MayaOutliner:
             url: URL to load. If None, auto-detect based on use_local flag
             use_local: If True, use local built files. If False, use dev server (default: False)
         """
-        global USE_QT_BACKEND
-
         # Auto-detect URL if not provided
         if url is None:
             if use_local:
@@ -404,76 +341,68 @@ class MayaOutliner:
                 print(f"[MayaOutliner] Using dev server: {url}")
 
         print("[MayaOutliner] Creating WebView...")
-        print(f"[MayaOutliner] Backend: {'Qt' if USE_QT_BACKEND else 'Native'}")
+        print(f"[MayaOutliner] Backend: {'Qt' if self._use_qt else 'Native'}")
 
-        # Create WebView based on available backend
-        if USE_QT_BACKEND:
-            # Qt backend - integrates as a Qt widget
-            if QtWebView is None or omui is None or wrapInstance is None or QWidget is None:
-                print("[MayaOutliner] Qt backend components not available, falling back to Native")
-                USE_QT_BACKEND = False
-            else:
-                try:
-                    # Get Maya main window
-                    main_window_ptr = omui.MQtUtil.mainWindow()
+        # Get Maya main window handle for embedding
+        maya_hwnd = None
+        maya_window = None
+        try:
+            if omui is not None and wrapInstance is not None and QWidget is not None:
+                # Get Maya main window pointer
+                main_window_ptr = omui.MQtUtil.mainWindow()
+                if main_window_ptr:
+                    # Wrap the pointer to get the QWidget
                     maya_window = wrapInstance(int(main_window_ptr), QWidget)
 
-                    self.webview = QtWebView(
-                        parent=maya_window,
-                        title="Maya Outliner",
-                        width=400,
-                        height=800,
-                    )
-                    self.webview.load_url(url)
-                    print("[MayaOutliner] Qt WebView created")
-                except Exception as e:
-                    print(f"[MayaOutliner] Error creating Qt WebView: {e}")
-                    print("[MayaOutliner] Falling back to Native backend")
-                    USE_QT_BACKEND = False
-
-        if not USE_QT_BACKEND:
-            # Native backend - embedded in Maya (non-blocking)
-            if WebView is None:
-                raise RuntimeError(
-                    "Native WebView backend is not available. "
-                    "Make sure auroraview is properly installed."
-                )
-
-            # Get Maya main window handle for embedding
-            maya_hwnd = None
-            try:
-                if omui is not None and wrapInstance is not None and QWidget is not None:
-                    # Get Maya main window pointer
-                    main_window_ptr = omui.MQtUtil.mainWindow()
-                    if main_window_ptr:
-                        # Wrap the pointer to get the QWidget
-                        maya_window = wrapInstance(int(main_window_ptr), QWidget)
-
-                        # Get the native window handle (HWND on Windows)
-                        maya_hwnd = int(maya_window.winId())
-                        print(f"[MayaOutliner] Maya window handle (HWND): {maya_hwnd}")
-                        print(f"[MayaOutliner] Maya window handle (hex): 0x{maya_hwnd:X}")
-                    else:
-                        print("[MayaOutliner] Warning: Could not get Maya main window pointer")
+                    # Get the native window handle (HWND on Windows)
+                    maya_hwnd = int(maya_window.winId())
+                    print(f"[MayaOutliner] Maya window handle (HWND): {maya_hwnd}")
+                    print(f"[MayaOutliner] Maya window handle (hex): 0x{maya_hwnd:X}")
                 else:
-                    print("[MayaOutliner] Warning: Maya not available, using standalone mode")
+                    print("[MayaOutliner] Warning: Could not get Maya main window pointer")
+            else:
+                print("[MayaOutliner] Warning: Maya Qt not available, using standalone mode")
+        except Exception as e:
+            print(f"[MayaOutliner] Warning: Failed to get Maya window handle: {e}")
+            import traceback
+
+            traceback.print_exc()
+            maya_hwnd = None
+
+        # Create WebView based on backend choice
+        if self._use_qt and maya_window is not None:
+            # Qt backend - integrates as a Qt widget
+            print("[MayaOutliner] Using Qt backend")
+            try:
+                self.webview = QtWebView(
+                    parent=maya_window,
+                    title="Maya Outliner",
+                    width=400,
+                    height=800,
+                    dev_tools=True,
+                )
+                self.webview.load_url(url)
+                print("[MayaOutliner] ✓ Qt WebView created")
             except Exception as e:
-                print(f"[MayaOutliner] Warning: Failed to get Maya window handle: {e}")
-                import traceback
+                print(f"[MayaOutliner] ✗ Error creating Qt WebView: {e}")
+                print("[MayaOutliner] Falling back to Native backend")
+                self._use_qt = False
 
-                traceback.print_exc()
-                maya_hwnd = None
-
-            self.webview = WebView(
+        if not self._use_qt:
+            # Native backend - use WebView.create() factory method
+            print("[MayaOutliner] Using Native backend")
+            self.webview = WebView.create(
                 title="Maya Outliner",
+                url=url,
                 width=400,
                 height=800,
-                url=url,
-                debug=True,  # Enable developer tools
                 parent=maya_hwnd,
-                mode="owner" if maya_hwnd else None,  # Use owner mode for cross-thread safety
+                mode="auto",  # Auto-select owner mode for embedded
+                debug=True,  # Enable developer tools
+                auto_show=False,  # Don't show yet, register handlers first
+                auto_timer=True,  # Auto-start EventTimer for embedded mode
             )
-            print(f"[MayaOutliner] Native WebView created (embedded: {maya_hwnd is not None})")
+            print(f"[MayaOutliner] ✓ Native WebView created (embedded: {maya_hwnd is not None})")
 
         print("[MayaOutliner] Registering IPC handlers...")
 
@@ -515,27 +444,22 @@ class MayaOutliner:
         print("[MayaOutliner] Starting WebView...")
         print(f"[MayaOutliner] URL: {url}")
 
-        if USE_QT_BACKEND:
-            # Qt backend - show as Qt widget (non-blocking)
-            self.webview.show()
-            print("[MayaOutliner] Qt WebView shown (non-blocking)")
-        else:
-            # Native backend - use different methods based on embedding
-            if self.webview._parent is not None:
-                # Embedded mode - use core.show() directly (non-blocking)
-                print("[MayaOutliner] Using embedded mode (owner)")
-                self._is_embedded = True
-                self.webview._core.show()
-                print("[MayaOutliner] Native WebView shown (embedded, non-blocking)")
-                # Start event processing for embedded native backend to handle WM_CLOSE, etc.
-                self._start_event_processing()
+        # Show WebView (both backends support show())
+        self.webview.show()
 
+        if self._use_qt:
+            print("[MayaOutliner] ✓ Qt WebView shown (non-blocking)")
+        else:
+            if maya_hwnd is not None:
+                print("[MayaOutliner] ✓ Native WebView shown (embedded mode, non-blocking)")
+                # EventTimer is auto-started by WebView.create() when auto_timer=True
+                timer = self._get_event_timer()
+                if timer:
+                    print(f"[MayaOutliner] ✓ EventTimer running (interval={timer.interval_ms}ms)")
+                else:
+                    print("[MayaOutliner] ⚠ EventTimer not available")
             else:
-                # Standalone mode - use show() which runs in background thread
-                print("[MayaOutliner] Using standalone mode")
-                self._is_embedded = False
-                self.webview.show()
-                print("[MayaOutliner] Native WebView shown (standalone, background thread)")
+                print("[MayaOutliner] ✓ Native WebView shown (standalone mode)")
 
         print("[MayaOutliner] Maya Outliner is running!")
         print("[MayaOutliner] Use outliner.close() to close the window")
@@ -544,9 +468,8 @@ class MayaOutliner:
         """Close the WebView window and cleanup
 
         This method is safe to call multiple times and handles all cleanup:
-        - Stops EventTimer
         - Removes Maya callbacks
-        - Closes WebView window
+        - Closes WebView window (which auto-stops EventTimer)
         - Removes from singleton registry
         """
         # Prevent re-entrant calls
@@ -564,112 +487,29 @@ class MayaOutliner:
         self._is_closing = True
 
         try:
-            # Step 1: Stop event processing timer first to avoid re-entrancy during close
-            print("[MayaOutliner] Step 1: Stopping EventTimer...")
-            self._stop_event_processing()
-
-            # Step 2: Remove Maya callbacks
-            print("[MayaOutliner] Step 2: Removing Maya callbacks...")
+            # Step 1: Remove Maya callbacks first
+            print("[MayaOutliner] Step 1: Removing Maya callbacks...")
             self.cleanup_callbacks()
 
-            # Step 3: Close the WebView
-            print("[MayaOutliner] Step 3: Closing WebView window...")
-            close_success = False
-
-            if USE_QT_BACKEND:
-                # Qt backend - close the widget
-                if hasattr(self.webview, "close"):
-                    self.webview.close()
-                    print("[MayaOutliner] Qt WebView closed")
-                    close_success = True
+            # Step 2: Close the WebView
+            # The new WebView.close() handles EventTimer cleanup automatically
+            print("[MayaOutliner] Step 2: Closing WebView window...")
+            if hasattr(self.webview, "close"):
+                self.webview.close()
+                print("[MayaOutliner] ✓ WebView closed")
             else:
-                # Native backend - always use the wrapper's close method
-                # The wrapper handles both embedded and standalone modes correctly
-                if hasattr(self.webview, "close"):
-                    try:
-                        self.webview.close()
-                        print("[MayaOutliner] Native WebView close() invoked")
-                        # Verify if the window actually closed (embedded mode needs this)
-                        close_success = False
-                        try:
-                            core = getattr(self.webview, "_core", None)
-                            if core is not None and hasattr(core, "is_window_valid"):
-                                valid = core.is_window_valid()
-                                print(f"[MayaOutliner] is_window_valid -> {valid}")
-                                close_success = not valid
-                            elif hasattr(self.webview, "is_alive"):
-                                close_success = not self.webview.is_alive()
-                        except Exception:
-                            # If verification fails, fall back to force-close path below
-                            close_success = False
-                    except Exception as e:
-                        print(f"[MayaOutliner] Error calling WebView.close(): {e}")
-                        traceback.print_exc()
-                else:
-                    print("[MayaOutliner] Warning: WebView has no close method")
+                print("[MayaOutliner] ⚠ WebView has no close method")
 
-            # If normal close failed, try force close using HWND
-            if not close_success:
-                print("[MayaOutliner] Attempting force close using HWND...")
-                try:
-                    from auroraview import close_window_by_hwnd, destroy_window_by_hwnd
-
-                    # Get HWND from webview (support wrapper or core object)
-                    hwnd = None
-                    try:
-                        if hasattr(self.webview, "get_hwnd"):
-                            hwnd = self.webview.get_hwnd()
-                        elif hasattr(self.webview, "_core") and hasattr(
-                            self.webview._core, "get_hwnd"
-                        ):
-                            hwnd = self.webview._core.get_hwnd()
-                    except Exception:
-                        hwnd = None
-
-                    if hwnd:
-                        print(f"[MayaOutliner] Got HWND: 0x{hwnd:x}")
-
-                        # Try WM_CLOSE first (graceful)
-                        print("[MayaOutliner] Trying WM_CLOSE...")
-                        if close_window_by_hwnd(hwnd):
-                            print("[MayaOutliner] WM_CLOSE sent successfully")
-                            # Pump a few message cycles so WM_CLOSE is processed even after stopping the timer
-                            import time
-
-                            for _ in range(10):
-                                if hasattr(self.webview, "_core") and hasattr(
-                                    self.webview._core, "process_events"
-                                ):
-                                    try:
-                                        self.webview._core.process_events()
-                                    except Exception:
-                                        pass
-                                time.sleep(0.01)
-
-                        # If still not closed, use DestroyWindow (aggressive)
-                        print("[MayaOutliner] Trying DestroyWindow...")
-                        if destroy_window_by_hwnd(hwnd):
-                            print("[MayaOutliner] ✅ Window destroyed successfully")
-                        else:
-                            print("[MayaOutliner] ❌ DestroyWindow failed")
-                    else:
-                        print(
-                            "[MayaOutliner] Could not get HWND from webview (no get_hwnd on wrapper/core)"
-                        )
-                except Exception as e:
-                    print(f"[MayaOutliner] Error during force close: {e}")
-                    traceback.print_exc()
-
-            # Step 4: Clear reference
+            # Step 3: Clear reference
             self.webview = None
 
-            # Step 5: Remove from singleton registry
+            # Step 4: Remove from singleton registry
             self._remove_from_registry()
 
-            print("[MayaOutliner] WebView cleanup complete")
+            print("[MayaOutliner] ✓ WebView cleanup complete")
 
         except Exception as e:
-            print(f"[MayaOutliner] Error closing WebView: {e}")
+            print(f"[MayaOutliner] ✗ Error closing WebView: {e}")
             import traceback
 
             traceback.print_exc()
@@ -677,19 +517,28 @@ class MayaOutliner:
             self._is_closing = False
 
 
-def main(url: Optional[str] = None, use_local: bool = False, singleton: bool = True):
+def main(
+    url: Optional[str] = None,
+    use_local: bool = False,
+    singleton: bool = True,
+    use_qt: bool = False,
+):
     """Main entry point with singleton support
 
     Args:
         url: URL to load. If None, auto-detect based on use_local flag
         use_local: If True, use local built files. If False, use dev server (default: False)
         singleton: If True, only allow one instance at a time (default: True)
+        use_qt: If True, use QtWebView backend. If False, use native WebView (default: False)
 
     Usage in Maya:
         >>> from maya_integration import maya_outliner
         >>>
-        >>> # Use dev server with singleton mode (default)
+        >>> # Use dev server with singleton mode (default, native backend)
         >>> outliner = maya_outliner.main()
+        >>>
+        >>> # Use Qt backend
+        >>> outliner = maya_outliner.main(use_qt=True)
         >>>
         >>> # Calling again returns the same instance
         >>> outliner2 = maya_outliner.main()  # Returns existing instance
@@ -711,37 +560,41 @@ def main(url: Optional[str] = None, use_local: bool = False, singleton: bool = T
     print()
 
     if not MAYA_AVAILABLE:
-        print("Warning: Running without Maya (using mock data)")
+        print("⚠ Warning: Running without Maya (using mock data)")
         print()
+
+    backend_name = "Qt" if use_qt else "Native"
+    print(f"Backend: {backend_name}")
+    print()
 
     if singleton:
         # Singleton mode - return existing instance or create new one
         def create_instance():
-            outliner = MayaOutliner(singleton_key="maya_outliner_default")
+            outliner = MayaOutliner(singleton_key="maya_outliner_default", use_qt=use_qt)
             outliner.run(url=url, use_local=use_local)
             return outliner
 
         outliner = MayaOutliner._get_or_create_singleton("maya_outliner_default", create_instance)
     else:
         # Multi-instance mode - always create new instance
-        outliner = MayaOutliner()
+        outliner = MayaOutliner(use_qt=use_qt)
         outliner.run(url=url, use_local=use_local)
 
     print()
     print("=" * 60)
-    print("Maya Outliner started successfully!")
+    print("✓ Maya Outliner started successfully!")
     print("=" * 60)
     print()
     print("Tips:")
-    print("- Click nodes to select them in Maya")
-    print("- Toggle visibility with the eye icon")
-    print("- Use search to filter nodes")
-    print("- Press F12 to open DevTools")
-    print("- Use outliner.close() to close the window")
+    print("  • Click nodes to select them in Maya")
+    print("  • Toggle visibility with the eye icon")
+    print("  • Use search to filter nodes")
+    print("  • Press F12 to open DevTools")
+    print("  • Use outliner.close() to close the window")
     if singleton:
-        print("- Singleton mode: Only one instance allowed at a time")
+        print("  • Singleton mode: Only one instance allowed at a time")
     else:
-        print("- Multi-instance mode: Multiple windows can coexist")
+        print("  • Multi-instance mode: Multiple windows can coexist")
     print()
 
     return outliner
