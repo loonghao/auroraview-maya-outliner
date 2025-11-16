@@ -130,6 +130,7 @@ class MayaOutliner:
             use_qt: If True, use QtWebView backend. If False, use native WebView (default: False)
         """
         self.webview: Optional[Any] = None  # WebView or QtWebView
+        self.dialog: Optional[Any] = None  # QDialog container (Qt backend only)
         self.api: Optional[MayaOutlinerAPI] = None  # API object for JavaScript
         self.callback_ids: List[Any] = []
         self._singleton_key = singleton_key
@@ -438,18 +439,30 @@ class MayaOutliner:
 
         # Create WebView based on backend choice
         if self._use_qt and maya_window is not None:
-            # Qt backend - integrates as a Qt widget
-            print("[MayaOutliner] Using Qt backend")
+            # Qt backend - create QDialog container with QtWebView as child widget
+            # This follows the pattern from maya_qt_echo_demo.py
+            print("[MayaOutliner] Using Qt backend with QDialog container")
             try:
-                self.webview = QtWebView(
-                    parent=maya_window,
-                    title="Maya Outliner",
-                    width=400,
-                    height=800,
-                    dev_tools=True,
-                )
+                from qtpy.QtWidgets import QDialog, QVBoxLayout
+
+                # Create QDialog container (parent is Maya main window)
+                self.dialog = QDialog(maya_window)
+                self.dialog.setWindowTitle("Maya Outliner")
+                self.dialog.resize(400, 800)
+                self.dialog.setSizeGripEnabled(True)
+                self.dialog.setStyleSheet("background-color: #2b2b2b;")
+
+                # Create layout with no margins for full WebView
+                layout = QVBoxLayout(self.dialog)
+                layout.setContentsMargins(0, 0, 0, 0)
+
+                # Create QtWebView as child widget (parent is dialog, not Maya window!)
+                self.webview = QtWebView(self.dialog, dev_tools=True)
+                layout.addWidget(self.webview)
+
+                # Load URL
                 self.webview.load_url(url)
-                print("[MayaOutliner] ✓ Qt WebView created")
+                print("[MayaOutliner] ✓ QDialog and QtWebView created")
             except Exception as e:
                 print(f"[MayaOutliner] ✗ Error creating Qt WebView: {e}")
                 print("[MayaOutliner] Falling back to Native backend")
@@ -508,12 +521,14 @@ class MayaOutliner:
         print("[MayaOutliner] Starting WebView...")
         print(f"[MayaOutliner] URL: {url}")
 
-        # Show WebView (both backends support show())
-        self.webview.show()
-
+        # Show WebView or Dialog depending on backend
         if self._use_qt:
-            print("[MayaOutliner] ✓ Qt WebView shown (non-blocking)")
+            # Show the QDialog container (which contains the QtWebView)
+            self.dialog.show()
+            print("[MayaOutliner] ✓ QDialog with QtWebView shown (non-blocking)")
         else:
+            # Show the Native WebView directly
+            self.webview.show()
             if maya_hwnd is not None:
                 print("[MayaOutliner] ✓ Native WebView shown (embedded mode, non-blocking)")
                 # EventTimer is auto-started by WebView.create() when auto_timer=True
@@ -555,17 +570,26 @@ class MayaOutliner:
             print("[MayaOutliner] Step 1: Removing Maya callbacks...")
             self.cleanup_callbacks()
 
-            # Step 2: Close the WebView
-            # The new WebView.close() handles EventTimer cleanup automatically
+            # Step 2: Close the WebView and Dialog
             print("[MayaOutliner] Step 2: Closing WebView window...")
+
+            # Close QDialog if using Qt backend
+            if self._use_qt and self.dialog is not None:
+                print("[MayaOutliner] Closing QDialog...")
+                self.dialog.close()
+                self.dialog = None
+                print("[MayaOutliner] ✓ QDialog closed")
+
+            # Close WebView
             if hasattr(self.webview, "close"):
                 self.webview.close()
                 print("[MayaOutliner] ✓ WebView closed")
             else:
                 print("[MayaOutliner] ⚠ WebView has no close method")
 
-            # Step 3: Clear reference
+            # Step 3: Clear references
             self.webview = None
+            self.dialog = None
 
             # Step 4: Remove from singleton registry
             self._remove_from_registry()
