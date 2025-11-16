@@ -74,6 +74,13 @@ class MayaOutlinerAPI:
         print("[MayaOutlinerAPI] get_scene_hierarchy called with params:", params)
         hierarchy = self._outliner.get_scene_hierarchy()
         print(f"[MayaOutlinerAPI] Returning {len(hierarchy)} root nodes")
+
+        # Debug: print first few nodes
+        if hierarchy:
+            print(f"[MayaOutlinerAPI] First node: {hierarchy[0].get('name', 'unknown')}")
+        else:
+            print("[MayaOutlinerAPI] WARNING: No nodes found in scene!")
+
         return hierarchy
 
     def select_node(self, node_name: str) -> Dict[str, Any]:
@@ -192,7 +199,19 @@ class MayaOutliner:
             }
 
         # Get all root nodes (nodes without parents)
+        # assemblies=True returns top-level transform nodes (excludes cameras, lights by default)
         all_nodes = cmds.ls(assemblies=True) or []
+
+        print(f"[MayaOutliner] Found {len(all_nodes)} root nodes: {all_nodes}")
+
+        # If no assemblies, try getting all transform nodes
+        if not all_nodes:
+            print("[MayaOutliner] No assemblies found, trying all transforms...")
+            all_transforms = cmds.ls(type='transform') or []
+            # Filter to only root transforms (no parent)
+            all_nodes = [t for t in all_transforms if not cmds.listRelatives(t, parent=True)]
+            print(f"[MayaOutliner] Found {len(all_nodes)} root transforms: {all_nodes}")
+
         return [build_node_tree(node) for node in all_nodes]
 
     def _get_mock_hierarchy(self) -> List[Dict[str, Any]]:
@@ -304,19 +323,38 @@ class MayaOutliner:
 
         # Scene changed callback
         def on_scene_changed(*args):
+            print("[MayaOutliner] Scene changed, updating hierarchy...")
             self.send_scene_update()
 
         try:
-            # Register callbacks
-            sel_callback = om.MEventMessage.addEventCallback(
-                "SelectionChanged", on_selection_changed
-            )
-            scene_callback = om.MEventMessage.addEventCallback("SceneOpened", on_scene_changed)
+            # Register callbacks for various scene events
+            callbacks = []
 
-            self.callback_ids.extend([sel_callback, scene_callback])
-            print("[MayaOutliner] Maya callbacks registered")
+            # Selection changes
+            callbacks.append(om.MEventMessage.addEventCallback(
+                "SelectionChanged", on_selection_changed
+            ))
+
+            # Scene structure changes
+            scene_events = [
+                "SceneOpened",      # Scene opened
+                "NewSceneOpened",   # New scene created
+                "DagObjectCreated", # Object created
+                "Undo",             # Undo operation
+                "Redo",             # Redo operation
+            ]
+
+            for event in scene_events:
+                callbacks.append(om.MEventMessage.addEventCallback(
+                    event, on_scene_changed
+                ))
+
+            self.callback_ids.extend(callbacks)
+            print(f"[MayaOutliner] Registered {len(callbacks)} Maya callbacks")
         except Exception as e:
             print(f"[MayaOutliner] Error registering callbacks: {e}")
+            import traceback
+            traceback.print_exc()
 
     def cleanup_callbacks(self):
         """Remove Maya callbacks"""
