@@ -4,34 +4,53 @@ import OutlinerTree from './components/OutlinerTree.vue'
 import { useMayaIPC } from './composables/useMayaIPC'
 import type { MayaNode } from './types'
 
-const { sendToMaya, onMayaEvent } = useMayaIPC()
+const { getSceneHierarchy, selectNode, setVisibility, onMayaEvent } = useMayaIPC()
 const sceneData = ref<MayaNode[]>([])
 const selectedNode = ref<string | null>(null)
 const searchQuery = ref('')
 const isConnected = ref(false)
 
-onMounted(() => {
-  // Request initial scene data
-  sendToMaya('get_scene_hierarchy', {})
+onMounted(async () => {
+  // Request initial scene data using modern API
+  try {
+    const hierarchy = await getSceneHierarchy()
+    sceneData.value = hierarchy
+    isConnected.value = true
+    console.log('[App] Scene hierarchy loaded:', hierarchy.length, 'root nodes')
+  } catch (error) {
+    console.error('[App] Failed to load scene hierarchy:', error)
+  }
 
-  // Listen for scene updates from Maya
+  // Listen for scene updates from Maya (push notifications)
   onMayaEvent('scene_updated', (data: MayaNode[]) => {
     sceneData.value = data
     isConnected.value = true
+    console.log('[App] Scene updated:', data.length, 'root nodes')
   })
 
   onMayaEvent('selection_changed', (data: { node: string }) => {
     selectedNode.value = data.node
+    console.log('[App] Selection changed:', data.node)
   })
 })
 
-const handleNodeSelect = (nodeName: string) => {
+const handleNodeSelect = async (nodeName: string) => {
   selectedNode.value = nodeName
-  sendToMaya('select_node', { node_name: nodeName })
+  try {
+    const result = await selectNode(nodeName)
+    console.log('[App] Node selected:', result)
+  } catch (error) {
+    console.error('[App] Failed to select node:', error)
+  }
 }
 
-const handleVisibilityToggle = (nodeName: string, visible: boolean) => {
-  sendToMaya('set_visibility', { node_name: nodeName, visible })
+const handleVisibilityToggle = async (nodeName: string, visible: boolean) => {
+  try {
+    const result = await setVisibility(nodeName, visible)
+    console.log('[App] Visibility toggled:', result)
+  } catch (error) {
+    console.error('[App] Failed to toggle visibility:', error)
+  }
 }
 
 </script>
