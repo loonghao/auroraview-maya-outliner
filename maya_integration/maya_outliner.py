@@ -20,11 +20,11 @@ except ImportError:
     MAYA_AVAILABLE = False
     print("[MayaOutliner] Warning: Maya not available, using mock data")
 
-# Import AuroraView components (Qt backend only)
+# Import AuroraView components (following official pattern)
 try:
-    from auroraview import QtWebView
+    from auroraview import AuroraView, QtWebView
 
-    print("[MayaOutliner] ✓ AuroraView QtWebView imported successfully")
+    print("[MayaOutliner] ✓ AuroraView imported successfully")
 except ImportError as e:
     print(f"[MayaOutliner] ✗ Failed to import auroraview: {e}")
     print("[MayaOutliner] Make sure auroraview is installed and PYTHONPATH is set correctly")
@@ -122,7 +122,7 @@ class MayaOutliner:
     _singleton_lock = None  # Will be initialized when needed
 
     def __init__(self, singleton_key: Optional[str] = None):
-        """Initialize Maya Outliner (simplified - Qt backend only)
+        """Initialize Maya Outliner (following official AuroraView pattern)
 
         Args:
             singleton_key: If provided, enables singleton mode with this key.
@@ -131,6 +131,7 @@ class MayaOutliner:
         self.webview: Optional[Any] = None  # QtWebView
         self.dialog: Optional[Any] = None  # QDialog container
         self.api: Optional[MayaOutlinerAPI] = None  # API object for JavaScript
+        self.auroraview: Optional[Any] = None  # AuroraView wrapper
         self.callback_ids: List[Any] = []
         self._singleton_key = singleton_key
         self._is_closing = False  # Prevent re-entrant close calls
@@ -416,7 +417,7 @@ class MayaOutliner:
             import traceback
             traceback.print_exc()
 
-        # Create Qt backend WebView (simplified - Qt backend only)
+        # Create Qt WebView (following official AuroraView pattern)
         print("[MayaOutliner] Creating Qt WebView...")
 
         if maya_window is None:
@@ -435,43 +436,30 @@ class MayaOutliner:
         layout = QVBoxLayout(self.dialog)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Create QtWebView as child widget (parent is dialog, not Maya window!)
+        # Create QtWebView as child widget (parent is dialog)
         self.webview = QtWebView(self.dialog, dev_tools=True)
         layout.addWidget(self.webview)
 
-        # Load URL
-        self.webview.load_url(url)
-        print(f"[MayaOutliner] ✓ QtWebView created and loaded: {url}")
-
-        print("[MayaOutliner] Binding API...")
-
-        # Create API object and bind it to auroraview.api.*
+        # Create API object
         self.api = MayaOutlinerAPI(self)
 
-        # Bind API methods to JavaScript
-        if hasattr(self.webview, "bind_api"):
-            self.webview.bind_api(self.api, namespace="api")
-            print("[MayaOutliner] ✓ API bound to auroraview.api.*")
-        else:
-            print("[MayaOutliner] ⚠ WebView does not support bind_api, using legacy event handlers")
-            # Fallback to legacy event handlers for older backends
-            @self.webview.on("get_scene_hierarchy")
-            def handle_get_hierarchy(data):
-                hierarchy = self.api.get_scene_hierarchy()
-                self.webview.emit("scene_updated", hierarchy)
+        # Bind Python API to auroraview.api.* via AuroraView wrapper
+        # This follows the official pattern from maya_qt_echo_demo.py
+        self.auroraview = AuroraView(
+            parent=self.dialog,
+            api=self.api,
+            _view=self.webview,
+            _keep_alive_root=self.dialog,
+        )
+        print("[MayaOutliner] ✓ API bound to auroraview.api.* via AuroraView wrapper")
 
-            @self.webview.on("select_node")
-            def handle_select_node(data):
-                node_name = data.get("node_name")
-                if node_name:
-                    self.api.select_node(node_name)
+        # Load URL
+        self.webview.load_url(url)
+        print(f"[MayaOutliner] ✓ URL loaded: {url}")
 
-            @self.webview.on("set_visibility")
-            def handle_set_visibility(data):
-                node_name = data.get("node_name")
-                visible = data.get("visible", True)
-                if node_name is not None:
-                    self.api.set_visibility(node_name, visible)
+        # Show WebView (following official pattern)
+        self.webview.show()
+        print("[MayaOutliner] ✓ WebView shown")
 
         # Setup Maya callbacks
         self.setup_maya_callbacks()
@@ -507,7 +495,9 @@ class MayaOutliner:
                 print("[MayaOutliner] ✓ QDialog closed")
 
             # Clear references
+            self.auroraview = None
             self.webview = None
+            self.api = None
 
             # Remove from singleton registry
             self._remove_from_registry()
