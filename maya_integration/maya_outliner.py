@@ -84,11 +84,8 @@ class MayaOutlinerAPI:
         """
         print(f"[MayaOutlinerAPI] select_node called: {node_name}")
         try:
-            # Use executeDeferred to avoid Maya freezing
-            if MAYA_AVAILABLE:
-                mutils.executeDeferred(lambda: self._outliner.select_node(node_name))
-            else:
-                self._outliner.select_node(node_name)
+            # Direct execution - QtWebView runs in Qt event loop, no need for executeDeferred
+            self._outliner.select_node(node_name)
             return {"ok": True, "message": f"Selected: {node_name}"}
         except Exception as e:
             print(f"[MayaOutlinerAPI] Error selecting node: {e}")
@@ -106,11 +103,8 @@ class MayaOutlinerAPI:
         """
         print(f"[MayaOutlinerAPI] set_visibility called: {node_name}, visible={visible}")
         try:
-            # Use executeDeferred to avoid Maya freezing
-            if MAYA_AVAILABLE:
-                mutils.executeDeferred(lambda: self._outliner.set_visibility(node_name, visible))
-            else:
-                self._outliner.set_visibility(node_name, visible)
+            # Direct execution - QtWebView runs in Qt event loop, no need for executeDeferred
+            self._outliner.set_visibility(node_name, visible)
             return {"ok": True, "message": f"Set visibility: {node_name} = {visible}"}
         except Exception as e:
             print(f"[MayaOutlinerAPI] Error setting visibility: {e}")
@@ -591,7 +585,7 @@ def main(
     url: Optional[str] = None,
     use_local: bool = False,
     singleton: bool = True,
-    use_qt: bool = False,
+    use_qt: bool = True,  # Default to Qt backend for better Maya integration
 ):
     """Main entry point with singleton support
 
@@ -599,16 +593,17 @@ def main(
         url: URL to load. If None, auto-detect based on use_local flag
         use_local: If True, use local built files. If False, use dev server (default: False)
         singleton: If True, only allow one instance at a time (default: True)
-        use_qt: If True, use QtWebView backend. If False, use native WebView (default: False)
+        use_qt: If True, use QtWebView backend. If False, use native WebView (default: True)
+               Qt backend is recommended for Maya as it runs in Qt event loop and won't block UI
 
     Usage in Maya:
         >>> from maya_integration import maya_outliner
         >>>
-        >>> # Use dev server with singleton mode (default, native backend)
+        >>> # Use dev server with singleton mode (default, Qt backend)
         >>> outliner = maya_outliner.main()
         >>>
-        >>> # Use Qt backend
-        >>> outliner = maya_outliner.main(use_qt=True)
+        >>> # Use native backend (not recommended in Maya)
+        >>> outliner = maya_outliner.main(use_qt=False)
         >>>
         >>> # Calling again returns the same instance
         >>> outliner2 = maya_outliner.main()  # Returns existing instance
