@@ -34,23 +34,41 @@ export function useMayaIPC() {
 
   /**
    * Call a Python API method (modern approach)
+   *
+   * AuroraView parameter passing rules:
+   * - If params is a dict: Python receives **params (keyword arguments)
+   * - If params is a list: Python receives *params (positional arguments)
+   * - If params is a single value: Python receives params (single argument)
    */
-  const callAPI = async <T = any>(method: string, ...args: any[]): Promise<T> => {
-    console.log('[MayaIPC] Calling API:', method, args)
+  const callAPI = async <T = any>(method: string, params?: any): Promise<T> => {
+    console.log('[MayaIPC] Calling API:', method, 'with params:', params)
+    console.log('[MayaIPC] window.auroraview:', window.auroraview)
+    console.log('[MayaIPC] window.auroraview?.api:', window.auroraview?.api)
 
     // Check if modern API is available
     if (window.auroraview?.api) {
+      console.log('[MayaIPC] ✓ AuroraView API object found')
+      console.log('[MayaIPC] Available API methods:', Object.keys(window.auroraview.api))
+
       const apiMethod = (window.auroraview.api as any)[method]
+      console.log(`[MayaIPC] API method '${method}':`, apiMethod, 'type:', typeof apiMethod)
+
       if (typeof apiMethod === 'function') {
         try {
-          const result = await apiMethod(...args)
-          console.log('[MayaIPC] API result:', method, result)
+          console.log(`[MayaIPC] Calling ${method} with params:`, params)
+          // Call with params object - AuroraView will handle the conversion
+          const result = params !== undefined ? await apiMethod(params) : await apiMethod()
+          console.log('[MayaIPC] ✓ API result:', method, result)
           return result
         } catch (error) {
-          console.error('[MayaIPC] API error:', method, error)
+          console.error('[MayaIPC] ✗ API error:', method, error)
           throw error
         }
+      } else {
+        console.error(`[MayaIPC] ✗ Method '${method}' is not a function or not found`)
       }
+    } else {
+      console.error('[MayaIPC] ✗ window.auroraview.api not available')
     }
 
     // Fallback to legacy event-based IPC
@@ -70,7 +88,7 @@ export function useMayaIPC() {
       }
 
       window.addEventListener(responseEvent, handleResponse)
-      sendToMaya(method, args.length === 1 ? args[0] : args)
+      sendToMaya(method, params)
     })
   }
 
@@ -129,15 +147,21 @@ export function useMayaIPC() {
    * Helper methods for common Maya operations
    */
   const getSceneHierarchy = async () => {
+    // No parameters needed for get_scene_hierarchy
     return callAPI<any[]>('get_scene_hierarchy')
   }
 
   const selectNode = async (nodeName: string) => {
-    return callAPI<{ ok: boolean; message: string }>('select_node', nodeName)
+    // Pass as named parameter object
+    return callAPI<{ ok: boolean; message: string }>('select_node', { node_name: nodeName })
   }
 
   const setVisibility = async (nodeName: string, visible: boolean) => {
-    return callAPI<{ ok: boolean; message: string }>('set_visibility', nodeName, visible)
+    // Pass as named parameter object
+    return callAPI<{ ok: boolean; message: string }>('set_visibility', {
+      node_name: nodeName,
+      visible: visible,
+    })
   }
 
   return {

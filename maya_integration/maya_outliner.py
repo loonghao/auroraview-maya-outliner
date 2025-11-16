@@ -62,13 +62,16 @@ class MayaOutlinerAPI:
         """
         self._outliner = outliner
 
-    def get_scene_hierarchy(self) -> List[Dict[str, Any]]:
+    def get_scene_hierarchy(self, params=None) -> List[Dict[str, Any]]:
         """Get Maya scene hierarchy.
+
+        Args:
+            params: Optional parameters (unused, accepts None from AuroraView)
 
         Returns:
             List of root nodes with their children
         """
-        print("[MayaOutlinerAPI] get_scene_hierarchy called")
+        print("[MayaOutlinerAPI] get_scene_hierarchy called with params:", params)
         hierarchy = self._outliner.get_scene_hierarchy()
         print(f"[MayaOutlinerAPI] Returning {len(hierarchy)} root nodes")
         return hierarchy
