@@ -22,7 +22,7 @@ except ImportError:
 
 # Import AuroraView components
 try:
-    from auroraview import EventTimer, QtWebView, WebView
+    from auroraview import AuroraView, QtWebView, WebView
 
     print("[MayaOutliner] ✓ AuroraView imported successfully")
 except ImportError as e:
@@ -34,15 +34,87 @@ except ImportError as e:
 omui = None
 wrapInstance = None
 QWidget = None
+QDialog = None
+QVBoxLayout = None
 try:
     import maya.OpenMayaUI as omui
-    from PySide2.QtWidgets import QWidget
+    from PySide2.QtWidgets import QDialog, QVBoxLayout, QWidget
     from shiboken2 import wrapInstance
 
     print("[MayaOutliner] ✓ Maya Qt components available")
 except ImportError as e:
     print(f"[MayaOutliner] ⚠ Maya Qt components not available: {e}")
     print("[MayaOutliner] Will use standalone mode")
+
+
+class MayaOutlinerAPI:
+    """API object exposed to JavaScript via auroraview.api.*
+
+    This class contains all the methods that can be called from JavaScript.
+    Methods on this class become `auroraview.api.<name>` on the JS side.
+    """
+
+    def __init__(self, outliner: "MayaOutliner"):
+        """Initialize API with reference to parent outliner.
+
+        Args:
+            outliner: Parent MayaOutliner instance
+        """
+        self._outliner = outliner
+
+    def get_scene_hierarchy(self) -> List[Dict[str, Any]]:
+        """Get Maya scene hierarchy.
+
+        Returns:
+            List of root nodes with their children
+        """
+        print("[MayaOutlinerAPI] get_scene_hierarchy called")
+        hierarchy = self._outliner.get_scene_hierarchy()
+        print(f"[MayaOutlinerAPI] Returning {len(hierarchy)} root nodes")
+        return hierarchy
+
+    def select_node(self, node_name: str) -> Dict[str, Any]:
+        """Select a node in Maya.
+
+        Args:
+            node_name: Name of the node to select
+
+        Returns:
+            Result dictionary with success status
+        """
+        print(f"[MayaOutlinerAPI] select_node called: {node_name}")
+        try:
+            # Use executeDeferred to avoid Maya freezing
+            if MAYA_AVAILABLE:
+                mutils.executeDeferred(lambda: self._outliner.select_node(node_name))
+            else:
+                self._outliner.select_node(node_name)
+            return {"ok": True, "message": f"Selected: {node_name}"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error selecting node: {e}")
+            return {"ok": False, "message": str(e)}
+
+    def set_visibility(self, node_name: str, visible: bool = True) -> Dict[str, Any]:
+        """Set node visibility in Maya.
+
+        Args:
+            node_name: Name of the node
+            visible: Whether the node should be visible
+
+        Returns:
+            Result dictionary with success status
+        """
+        print(f"[MayaOutlinerAPI] set_visibility called: {node_name}, visible={visible}")
+        try:
+            # Use executeDeferred to avoid Maya freezing
+            if MAYA_AVAILABLE:
+                mutils.executeDeferred(lambda: self._outliner.set_visibility(node_name, visible))
+            else:
+                self._outliner.set_visibility(node_name, visible)
+            return {"ok": True, "message": f"Set visibility: {node_name} = {visible}"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error setting visibility: {e}")
+            return {"ok": False, "message": str(e)}
 
 
 class MayaOutliner:
@@ -64,6 +136,7 @@ class MayaOutliner:
             use_qt: If True, use QtWebView backend. If False, use native WebView (default: False)
         """
         self.webview: Optional[Any] = None  # WebView or QtWebView
+        self.api: Optional[MayaOutlinerAPI] = None  # API object for JavaScript
         self.callback_ids: List[Any] = []
         self._singleton_key = singleton_key
         self._is_closing = False  # Prevent re-entrant close calls
@@ -404,38 +477,35 @@ class MayaOutliner:
             )
             print(f"[MayaOutliner] ✓ Native WebView created (embedded: {maya_hwnd is not None})")
 
-        print("[MayaOutliner] Registering IPC handlers...")
+        print("[MayaOutliner] Binding API...")
 
-        # Register IPC handlers
-        @self.webview.on("get_scene_hierarchy")
-        def handle_get_hierarchy(data):
-            print("[MayaOutliner] Received: get_scene_hierarchy")
-            hierarchy = self.get_scene_hierarchy()
-            print(f"[MayaOutliner] Sending {len(hierarchy)} root nodes")
-            self.webview.emit("scene_updated", hierarchy)
+        # Create API object and bind it to auroraview.api.*
+        self.api = MayaOutlinerAPI(self)
 
-        @self.webview.on("select_node")
-        def handle_select_node(data):
-            print(f"[MayaOutliner] Received: select_node - {data}")
-            node_name = data.get("node_name")
-            if node_name:
-                # Use executeDeferred to avoid Maya freezing
-                if MAYA_AVAILABLE:
-                    mutils.executeDeferred(lambda: self.select_node(node_name))
-                else:
-                    self.select_node(node_name)
+        # Bind API methods to JavaScript
+        if hasattr(self.webview, "bind_api"):
+            self.webview.bind_api(self.api, namespace="api")
+            print("[MayaOutliner] ✓ API bound to auroraview.api.*")
+        else:
+            print("[MayaOutliner] ⚠ WebView does not support bind_api, using legacy event handlers")
+            # Fallback to legacy event handlers for older backends
+            @self.webview.on("get_scene_hierarchy")
+            def handle_get_hierarchy(data):
+                hierarchy = self.api.get_scene_hierarchy()
+                self.webview.emit("scene_updated", hierarchy)
 
-        @self.webview.on("set_visibility")
-        def handle_set_visibility(data):
-            print(f"[MayaOutliner] Received: set_visibility - {data}")
-            node_name = data.get("node_name")
-            visible = data.get("visible", True)
-            if node_name is not None:
-                # Use executeDeferred to avoid Maya freezing
-                if MAYA_AVAILABLE:
-                    mutils.executeDeferred(lambda: self.set_visibility(node_name, visible))
-                else:
-                    self.set_visibility(node_name, visible)
+            @self.webview.on("select_node")
+            def handle_select_node(data):
+                node_name = data.get("node_name")
+                if node_name:
+                    self.api.select_node(node_name)
+
+            @self.webview.on("set_visibility")
+            def handle_set_visibility(data):
+                node_name = data.get("node_name")
+                visible = data.get("visible", True)
+                if node_name is not None:
+                    self.api.set_visibility(node_name, visible)
 
         # Setup Maya callbacks
         self.setup_maya_callbacks()
