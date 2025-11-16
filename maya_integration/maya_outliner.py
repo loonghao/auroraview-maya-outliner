@@ -395,10 +395,9 @@ class MayaOutliner:
                 print(f"[MayaOutliner] Using dev server: {url}")
 
         print("[MayaOutliner] Creating WebView...")
-        print(f"[MayaOutliner] Backend: {'Qt' if self._use_qt else 'Native'}")
+        print("[MayaOutliner] Backend: Qt (QtWebView)")
 
-        # Get Maya main window handle for embedding
-        maya_hwnd = None
+        # Get Maya main window as QWidget (for Qt backend)
         maya_window = None
         try:
             if omui is not None and wrapInstance is not None and QWidget is not None:
@@ -407,21 +406,15 @@ class MayaOutliner:
                 if main_window_ptr:
                     # Wrap the pointer to get the QWidget
                     maya_window = wrapInstance(int(main_window_ptr), QWidget)
-
-                    # Get the native window handle (HWND on Windows)
-                    maya_hwnd = int(maya_window.winId())
-                    print(f"[MayaOutliner] Maya window handle (HWND): {maya_hwnd}")
-                    print(f"[MayaOutliner] Maya window handle (hex): 0x{maya_hwnd:X}")
+                    print(f"[MayaOutliner] ✓ Maya main window found")
                 else:
-                    print("[MayaOutliner] Warning: Could not get Maya main window pointer")
+                    print("[MayaOutliner] ✗ Could not get Maya main window pointer")
             else:
-                print("[MayaOutliner] Warning: Maya Qt not available, using standalone mode")
+                print("[MayaOutliner] ✗ Maya Qt not available")
         except Exception as e:
-            print(f"[MayaOutliner] Warning: Failed to get Maya window handle: {e}")
+            print(f"[MayaOutliner] ✗ Failed to get Maya window: {e}")
             import traceback
-
             traceback.print_exc()
-            maya_hwnd = None
 
         # Create Qt backend WebView (simplified - Qt backend only)
         print("[MayaOutliner] Creating Qt WebView...")
