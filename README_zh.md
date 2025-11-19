@@ -245,9 +245,10 @@ maya-outliner/
 │   ├── App.vue                  # 根组件
 │   ├── main.ts                  # 入口点
 │   └── style.css                # 全局样式
-├── maya/
-│   ├── maya_outliner.py         # Maya 后端
+├── maya_integration/
+│   ├── maya_outliner.py         # Maya 后端 (AuroraView + QtWebView)
 │   └── __init__.py
+├── test_api_update.py           # AuroraView API 回归检查
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
@@ -256,18 +257,52 @@ maya-outliner/
 
 ### 添加新功能
 
-**1. 添加新的 IPC 事件:**
-
-前端 (`useMayaIPC.ts`):
-```typescript
-sendToMaya('my_event', { data: 'value' })
-```
+**1. 添加新的 API 方法(推荐):**
 
 后端 (`maya_outliner.py`):
 ```python
-@self.webview.on("my_event")
-def handle_my_event(data):
-    print(f"Received: {data}")
+class MayaOutlinerAPI:
+    ...
+
+    def frame_node(self, node_name: str) -> dict[str, Any]:
+        """Frame a node in Maya's viewport."""
+        cmds.viewFit(node_name)
+        return {"ok": True, "message": f"Framed: {node_name}"}
+```
+
+前端 (`useMayaIPC.ts`):
+```typescript
+const frameNode = (nodeName: string) =>
+  callAPI<{ ok: boolean; message: string }>('frame_node', { node_name: nodeName })
+```
+
+然后在组件中调用:
+```typescript
+await frameNode('pCube1')
+```
+
+#### auroraview.call / callAPI 参数编码规则
+
+- 前端最终会调用 `window.auroraview.call(method, params)`（你通常通过 `callAPI` 来使用）。
+- 消息里的参数通过 `params` 字段编码：
+  - 如果你调用 `callAPI('refresh')` **不传第二个参数**，消息里不会包含 `params` 字段，后端绑定的 Python 函数会以 **零参数** 方式调用（适用于像 `API.get_scene_hierarchy(self)` 这类无显式参数的方法）。
+  - 如果传入对象（例如 `{ node_name: 'pCube1' }`），会在 Python 侧变成关键字参数（`def frame_node(self, node_name: str)`）。
+  - 如果传入数组（例如 `[x, y]`），会在 Python 侧变成位置参数（`def move(self, x, y)`）。
+  - 如果显式传入 `null`，Python 会收到单个参数 `None`，这与完全不传 `params` 是不同的语义。
+
+
+**1.1 (可选) 从 Maya 发送新的推送事件:**
+
+后端 (`maya_outliner.py`):
+```python
+self.webview.emit("my_event", {"foo": "bar"})
+```
+
+前端 (`useMayaIPC.ts`):
+```typescript
+onMayaEvent('my_event', (payload) => {
+  console.log('Received from Maya', payload)
+})
 ```
 
 **2. 添加新的 UI 组件:**
@@ -299,10 +334,9 @@ mayapy -m pip install auroraview  # 安装 AuroraView
 npm run dev  # 启动开发服务器
 ```
 
-**无需 Maya 测试 IPC:**
+**无需 Maya 即可检查 API 更新情况:**
 ```bash
-python test_ipc.py  # 基础 IPC 测试
-python test_standalone.py  # 完整 outliner (mock 数据)
+python test_api_update.py  # 检查 AuroraView API 是否匹配
 ```
 
 ## 📚 了解更多
