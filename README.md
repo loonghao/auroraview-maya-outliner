@@ -263,32 +263,6 @@ If you see an error about the feature not enabled, rebuild AuroraView with `--fe
 
 
 
-### Complete Maya example (WebView2, embedded with IPC)
-
-The example now includes a fully interactive WebView2 variant that talks to Maya using the same CustomEvent API as the Qt/native wrapper. Use it when you want a Windows-native, Qt-loop-friendly control without QtWebEngine.
-
-Usage in Maya Script Editor (Python):
-
-````python
-import sys
-sys.path.append(r"C:\path\to\dcc_webview\examples\maya-outliner")
-
-from maya_integration.maya_outliner_webview2 import main
-outliner = main(url="http://localhost:5173")
-# Tip: outliner.close() to close programmatically
-````
-
-How it works:
-- Injects a tiny JS bridge so your existing frontend (CustomEvent-based) works unchanged
-- Page -> Maya: window.dispatchEvent(CustomEvent(name, {detail})) → chrome.webview.postMessage → Python
-- Maya -> Page: Python posts {type:"emit", event, detail} → page dispatchEvent(CustomEvent(event, {detail}))
-
-Supported events (already wired):
-- get_scene_hierarchy → scene_updated
-- select_node
-- set_visibility → scene_updated
-
-Note: This backend requires building AuroraView with `--features win-webview2`.
 
 ### Scene Hierarchy
 
@@ -339,34 +313,13 @@ Tested on Windows 10, Intel i7-9700K, 32GB RAM:
 
 ## 🔄 Event Processing
 
-This example uses **EventTimer** for automatic event processing, replacing the traditional `scriptJob` + `QTimer` approach:
+This example uses AuroraView's modern Qt integration instead of manually creating an `EventTimer`.
 
-```python
-from auroraview import WebView, EventTimer
+- The `QtWebView` widget embeds the core WebView backend.
+- The `AuroraView` facade keeps the IPC/event loop alive for you.
+- You do not need to create or manage an `EventTimer` in your own code for this outliner.
 
-# Create WebView
-webview = WebView(parent_hwnd=maya_hwnd, embedded=True)
-webview.show()
-
-# Create EventTimer - automatic event processing!
-timer = EventTimer(webview, interval_ms=16)  # 60 FPS
-
-@timer.on_close
-def handle_close():
-    print("Window closed")
-    timer.stop()
-
-timer.start()
-```
-
-**Benefits:**
-- ✅ **50% less code** compared to scriptJob + QTimer
-- ✅ **60 FPS refresh rate** (vs 30 FPS with QTimer)
-- ✅ **Multi-strategy close detection** (window messages + validity check)
-- ✅ **Automatic resource cleanup**
-- ✅ **Cross-platform compatible**
-
-EventTimer is now built-in to AuroraView examples; no separate migration document is required.
+If you are interested in the lower-level `WebView` + `EventTimer` APIs, please refer to the main AuroraView README.
 
 ## 🛠️ Development
 
@@ -384,8 +337,8 @@ maya-outliner/
 │   ├── App.vue                  # Root component
 │   ├── main.ts                  # Entry point
 │   └── style.css                # Global styles
-├── maya/
-│   ├── maya_outliner.py         # Maya backend
+├── maya_integration/
+│   ├── maya_outliner.py         # Maya backend (AuroraView + QtWebView)
 │   └── __init__.py
 ├── package.json
 ├── vite.config.ts
@@ -395,18 +348,52 @@ maya-outliner/
 
 ### Adding New Features
 
-**1. Add a new IPC event:**
-
-Frontend (`useMayaIPC.ts`):
-```typescript
-sendToMaya('my_event', { data: 'value' })
-```
+**1. Add a new API method (recommended):**
 
 Backend (`maya_outliner.py`):
 ```python
-@self.webview.on("my_event")
-def handle_my_event(data):
-    print(f"Received: {data}")
+class MayaOutlinerAPI:
+    ...
+
+    def frame_node(self, node_name: str) -> dict[str, Any]:
+        """Frame a node in Maya's viewport."""
+        cmds.viewFit(node_name)
+        return {"ok": True, "message": f"Framed: {node_name}"}
+```
+
+Frontend (`useMayaIPC.ts`):
+```typescript
+const frameNode = (nodeName: string) =>
+  callAPI<{ ok: boolean; message: string }>('frame_node', { node_name: nodeName })
+```
+
+Then call it from your component:
+```typescript
+await frameNode('pCube1')
+```
+
+#### Parameter encoding rules for auroraview.call / callAPI
+
+- JavaScript calls use `window.auroraview.call(method, params)` (or `callAPI` as a helper).
+- The payload is encoded using a `params` field:
+  - If you call `callAPI('refresh')` **without** a second argument, no `params` key is sent and the bound Python function is invoked with **no arguments** (use this for zero-parameter methods like `API.get_scene_hierarchy(self)`).
+  - If you pass an object (e.g. `{ node_name: 'pCube1' }`), it becomes keyword arguments on the Python side (`def frame_node(self, node_name: str)`).
+  - If you pass an array (e.g. `[x, y]`), it becomes positional arguments (`def move(self, x, y)`).
+  - If you explicitly pass `null`, Python receives a single argument `None` (this is different from omitting the parameter entirely).
+
+
+**1.1 (optional) Add a new push event from Maya:**
+
+Backend (`maya_outliner.py`):
+```python
+self.webview.emit("my_event", {"foo": "bar"})
+```
+
+Frontend (`useMayaIPC.ts`):
+```typescript
+onMayaEvent('my_event', (payload) => {
+  console.log('Received from Maya', payload)
+})
 ```
 
 **2. Add a new UI component:**

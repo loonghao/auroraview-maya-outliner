@@ -26,3 +26,4 @@ dist-ssr
 # Local development files
 userSetup.local.py
 *.local.py
+__pycache__/

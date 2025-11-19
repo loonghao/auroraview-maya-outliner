@@ -4,11 +4,7 @@ import type { IPCEventHandler } from '../types'
 declare global {
   interface Window {
     auroraview?: {
-      api?: {
-        get_scene_hierarchy?: () => Promise<any[]>
-        select_node?: (node_name: string) => Promise<{ ok: boolean; message: string }>
-        set_visibility?: (node_name: string, visible: boolean) => Promise<{ ok: boolean; message: string }>
-      }
+      api?: Record<string, any>  // API methods are dynamically bound
       emit?: (event: string, data: any) => void
     }
   }
@@ -45,62 +41,65 @@ export function useMayaIPC() {
     console.log('[MayaIPC] window.auroraview:', window.auroraview)
     console.log('[MayaIPC] window.auroraview?.api:', window.auroraview?.api)
 
-    // Check if modern API is available
-    if (window.auroraview?.api) {
-      console.log('[MayaIPC] ✓ AuroraView API object found')
-      console.log('[MayaIPC] Available API methods:', Object.keys(window.auroraview.api))
-
-      const apiMethod = (window.auroraview.api as any)[method]
-      console.log(`[MayaIPC] API method '${method}':`, apiMethod, 'type:', typeof apiMethod)
-
-      if (typeof apiMethod === 'function') {
-        try {
-          console.log(`[MayaIPC] Calling ${method} with params:`, params)
-          // Call with params object - AuroraView will handle the conversion
-          const result = params !== undefined ? await apiMethod(params) : await apiMethod()
-          console.log('[MayaIPC] ✓ API result:', method, result)
-          return result
-        } catch (error) {
-          console.error('[MayaIPC] ✗ API error:', method, error)
-          throw error
-        }
-      } else {
-        console.error(`[MayaIPC] ✗ Method '${method}' is not a function or not found`)
-      }
-    } else {
-      console.error('[MayaIPC] ✗ window.auroraview.api not available')
+    if (!window.auroraview?.api) {
+      throw new Error('[MayaIPC] window.auroraview.api not available')
     }
 
-    // Fallback to legacy event-based IPC
-    console.warn('[MayaIPC] Modern API not available, falling back to legacy IPC')
-    return new Promise((resolve, reject) => {
-      const responseEvent = `${method}_response`
-      const timeout = setTimeout(() => {
-        window.removeEventListener(responseEvent, handleResponse)
-        reject(new Error(`API call timeout: ${method}`))
-      }, 5000)
+    console.log('[MayaIPC] ✓ AuroraView API object found')
+    console.log('[MayaIPC] Available API methods:', Object.keys(window.auroraview.api))
 
-      const handleResponse = (e: Event) => {
-        clearTimeout(timeout)
-        window.removeEventListener(responseEvent, handleResponse)
-        const customEvent = e as CustomEvent
-        resolve(customEvent.detail)
-      }
+    const apiMethod = (window.auroraview.api as any)[method]
+    console.log(`[MayaIPC] API method '${method}':`, apiMethod, 'type:', typeof apiMethod)
 
-      window.addEventListener(responseEvent, handleResponse)
-      sendToMaya(method, params)
-    })
+    if (typeof apiMethod !== 'function') {
+      throw new Error(`[MayaIPC] Method '${method}' is not a function or not found on auroraview.api`)
+    }
+
+    try {
+      console.log(`[MayaIPC] Calling ${method} with params:`, params)
+      const result = params !== undefined ? await apiMethod(params) : await apiMethod()
+      console.log('[MayaIPC] ✓ API result:', method, result)
+      return result as T
+    } catch (error) {
+      console.error('[MayaIPC] ✗ API error:', method, error)
+      throw error
+    }
   }
 
   /**
-   * Send a message to Maya using AuroraView's CustomEvent system (legacy)
+   * Send a message to Maya using AuroraView IPC (legacy / compatibility path).
+   *
+   * Prefer auroraview.api.* where possible; this is only used as a fallback when
+   * window.auroraview.api is not available.
    */
-  const sendToMaya = (event: string, data: Record<string, unknown>) => {
-    console.log('[MayaIPC] Sending event:', event, data)
+  const sendToMaya = (event: string, data: Record<string, unknown> = {}) => {
+    const payload = data ?? {}
+    console.log('[MayaIPC] Sending event:', event, payload)
 
-    // AuroraView uses CustomEvent for IPC
+    // 1) Preferred: high-level AuroraView bridge
+    if ((window as any).auroraview && typeof (window as any).auroraview.send_event === 'function') {
+      console.log('[MayaIPC] -> via auroraview.send_event')
+      ;(window as any).auroraview.send_event(event, payload)
+      return
+    }
+
+    // 2) Fallback: low-level window.ipc.postMessage (older AuroraView builds)
+    if ((window as any).ipc && typeof (window as any).ipc.postMessage === 'function') {
+      console.log('[MayaIPC] -> via window.ipc.postMessage')
+      ;(window as any).ipc.postMessage(
+        JSON.stringify({
+          type: 'event',
+          event,
+          detail: payload,
+        }),
+      )
+      return
+    }
+
+    // 3) Final fallback: local CustomEvent only (no Python backend)
+    console.warn('[MayaIPC] No AuroraView IPC bridge detected, using window.dispatchEvent only')
     const customEvent = new CustomEvent(event, {
-      detail: data,
+      detail: payload,
     })
 
     window.dispatchEvent(customEvent)
@@ -113,18 +112,36 @@ export function useMayaIPC() {
     if (!eventHandlers.has(event)) {
       eventHandlers.set(event, new Set())
 
-      // Register global event listener for CustomEvent
-      const eventListener = (e: Event) => {
-        const customEvent = e as CustomEvent
-        console.log('[MayaIPC] Received event:', event, customEvent.detail)
-
+      // Prefer AuroraView's high-level event API when available
+      const dispatchToHandlers = (payload: unknown) => {
+        console.log('[MayaIPC] Received event:', event, payload)
         const handlers = eventHandlers.get(event)
         if (handlers) {
-          handlers.forEach((h) => h(customEvent.detail))
+          handlers.forEach((h) => h(payload))
         }
       }
 
-      window.addEventListener(event, eventListener)
+      // Debug: Check what's available on window.auroraview
+      console.log('[MayaIPC] Checking event registration for:', event)
+      console.log('[MayaIPC] window.auroraview:', window.auroraview)
+      console.log('[MayaIPC] window.auroraview.on:', (window.auroraview as any)?.on)
+      console.log('[MayaIPC] typeof window.auroraview.on:', typeof (window.auroraview as any)?.on)
+
+      if (window.auroraview && typeof (window.auroraview as any).on === 'function') {
+        console.log('[MayaIPC] ✓ Registering handler via window.auroraview.on for event:', event)
+        ;(window.auroraview as any).on(event, (payload: unknown) => {
+          console.log('[MayaIPC] ✓ Event received via auroraview.on:', event, payload)
+          dispatchToHandlers(payload)
+        })
+      } else {
+        console.log('[MayaIPC] ⚠ window.auroraview.on not available, using window.addEventListener for event:', event)
+        const eventListener = (e: Event) => {
+          const customEvent = e as CustomEvent
+          console.log('[MayaIPC] ✓ Event received via window.addEventListener:', event, customEvent.detail)
+          dispatchToHandlers(customEvent.detail)
+        }
+        window.addEventListener(event, eventListener)
+      }
     }
 
     eventHandlers.get(event)!.add(handler)
@@ -146,9 +163,41 @@ export function useMayaIPC() {
   /**
    * Helper methods for common Maya operations
    */
+  /**
+   * Get scene hierarchy using the modern auroraview.api.get_scene_hierarchy API.
+   *
+   * We intentionally do not implement any legacy fallback here so that
+   * debugging can focus purely on the modern Promise-based bridge.
+   */
   const getSceneHierarchy = async () => {
-    // No parameters needed for get_scene_hierarchy
-    return callAPI<any[]>('get_scene_hierarchy')
+    console.log('[MayaIPC] getSceneHierarchy: checking window.auroraview...')
+    console.log('[MayaIPC] window.auroraview:', window.auroraview)
+    console.log('[MayaIPC] window.auroraview?.api:', window.auroraview?.api)
+    console.log('[MayaIPC] typeof window.auroraview?.api:', typeof window.auroraview?.api)
+
+    if (!window.auroraview?.api) {
+      throw new Error('[MayaIPC] window.auroraview.api is not available')
+    }
+
+    console.log('[MayaIPC] Accessing window.auroraview.api.get_scene_hierarchy...')
+    const apiMethod = window.auroraview.api.get_scene_hierarchy
+    console.log('[MayaIPC] apiMethod:', apiMethod)
+    console.log('[MayaIPC] typeof apiMethod:', typeof apiMethod)
+
+    if (typeof apiMethod !== 'function') {
+      console.error('[MayaIPC] ✗ get_scene_hierarchy is not a function!')
+      console.error('[MayaIPC] Available keys on window.auroraview.api:', Object.keys(window.auroraview.api))
+      throw new Error('[MayaIPC] auroraview.api.get_scene_hierarchy is not available')
+    }
+
+    console.log('[MayaIPC] getSceneHierarchy: calling auroraview.api.get_scene_hierarchy()')
+    const result = await apiMethod()
+    console.log(
+      '[MayaIPC] getSceneHierarchy: modern API returned',
+      Array.isArray(result) ? result.length : 'unknown',
+      'root nodes',
+    )
+    return result
   }
 
   const selectNode = async (nodeName: string) => {
