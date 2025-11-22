@@ -238,6 +238,19 @@ const handleVisibilityToggle = async (nodeName: string, visible: boolean) => {
   }
 }
 
+const handleNodeParent = async (childName: string, parentName: string | null) => {
+  try {
+    await callAPI('parent_nodes', { child_name: childName, parent_name: parentName })
+    // Refresh scene hierarchy
+    const result = await getSceneHierarchy()
+    if (result) {
+      sceneData.value = result
+    }
+  } catch (error) {
+    console.error('[App] Failed to parent node:', error)
+  }
+}
+
 const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
 
   // Get extended API methods if available
@@ -351,6 +364,7 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
               @node-rename="handleNodeRename"
               @visibility-toggle="handleVisibilityToggle"
               @context-menu="handleContextMenu"
+              @node-parent="handleNodeParent"
             />
           </ScrollArea>
         </CardContent>

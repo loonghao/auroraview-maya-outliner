@@ -16,6 +16,7 @@ interface Emits {
   (e: 'node-rename', oldName: string, newName: string): void
   (e: 'visibility-toggle', nodeName: string, visible: boolean): void
   (e: 'context-menu', event: MouseEvent, node: MayaNode): void
+  (e: 'node-parent', childName: string, parentName: string | null): void
 }
 
 const props = defineProps<Props>()
@@ -107,6 +108,10 @@ const handleVisibilityToggle = (nodeName: string, visible: boolean) => {
 const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
   emit('context-menu', event, node)
 }
+
+const handleNodeParent = (childName: string, parentName: string | null) => {
+  emit('node-parent', childName, parentName)
+}
 </script>
 
 <template>
@@ -127,6 +132,7 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
         @node-rename="handleNodeRename"
         @visibility-toggle="handleVisibilityToggle"
         @context-menu="handleContextMenu"
+        @node-parent="handleNodeParent"
       />
     </div>
   </div>
