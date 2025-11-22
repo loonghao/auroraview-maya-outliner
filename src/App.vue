@@ -16,9 +16,14 @@ const { getSceneHierarchy, selectNode, setVisibility, onMayaEvent, callAPI } = u
 const contextMenu = useContextMenu()
 const sceneData = ref<MayaNode[]>([])
 const selectedNode = ref<string | null>(null)
+const selectedNodes = ref<Set<string>>(new Set()) // Multi-selection support
 const searchQuery = ref('')
 const isConnected = ref(false)
 const isUpdating = ref(false)
+
+// Display filters
+const showDAGOnly = ref(true) // Show DAG objects only
+const showHidden = ref(false) // Show hidden objects
 
 // Tree expansion state
 const expandAllTrigger = ref(0)
@@ -82,12 +87,52 @@ onMounted(async () => {
   })
 })
 
-const handleNodeSelect = async (nodeName: string) => {
-  selectedNode.value = nodeName
+const handleNodeSelect = async (nodeName: string, event?: MouseEvent) => {
+  // Multi-selection support
+  if (event?.ctrlKey || event?.metaKey) {
+    // Ctrl/Cmd + Click: Toggle selection
+    if (selectedNodes.value.has(nodeName)) {
+      selectedNodes.value.delete(nodeName)
+    } else {
+      selectedNodes.value.add(nodeName)
+    }
+    selectedNode.value = nodeName // Keep last selected as primary
+  } else if (event?.shiftKey && selectedNode.value) {
+    // Shift + Click: Range selection (TODO: implement range logic)
+    selectedNodes.value.add(selectedNode.value)
+    selectedNodes.value.add(nodeName)
+    selectedNode.value = nodeName
+  } else {
+    // Normal click: Single selection
+    selectedNodes.value.clear()
+    selectedNodes.value.add(nodeName)
+    selectedNode.value = nodeName
+  }
+
   try {
-    await selectNode(nodeName)
+    // Select all nodes in Maya
+    if (selectedNodes.value.size > 1) {
+      await callAPI('select_multiple_nodes', {
+        node_names: Array.from(selectedNodes.value)
+      })
+    } else {
+      await selectNode(nodeName)
+    }
   } catch (error) {
     console.error('[App] Failed to select node:', error)
+  }
+}
+
+const handleNodeRename = async (oldName: string, newName: string) => {
+  try {
+    await callAPI('rename_node', { old_name: oldName, new_name: newName })
+    // Refresh scene hierarchy after rename
+    const result = await getSceneHierarchy()
+    if (result) {
+      sceneData.value = result
+    }
+  } catch (error) {
+    console.error('[App] Failed to rename node:', error)
   }
 }
 
@@ -186,6 +231,16 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
         placeholder="Search nodes..."
         class="search-input"
       />
+      <div class="filter-options">
+        <label class="filter-checkbox">
+          <input type="checkbox" v-model="showDAGOnly" />
+          <span>DAG Objects Only</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" v-model="showHidden" />
+          <span>Show Hidden</span>
+        </label>
+      </div>
     </div>
 
     <main class="app-main">
@@ -197,6 +252,7 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
               :selected-node="selectedNode"
               :search-query="searchQuery"
               @node-select="handleNodeSelect"
+              @node-rename="handleNodeRename"
               @visibility-toggle="handleVisibilityToggle"
               @context-menu="handleContextMenu"
             />
@@ -335,6 +391,9 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
 .search-bar {
   margin-top: clamp(0.5rem, 0.35rem + 0.6vw, 1rem);
   margin-bottom: clamp(0.5rem, 0.35rem + 0.6vw, 1rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 0.4rem + 0.3vw, 0.8rem);
 }
 
 .search-input {
@@ -356,6 +415,35 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
   outline: none;
   border-color: #38bdf8;
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+}
+
+.filter-options {
+  display: flex;
+  gap: clamp(1rem, 0.8rem + 0.5vw, 1.5rem);
+  padding: clamp(0.4rem, 0.3rem + 0.2vw, 0.6rem) clamp(0.5rem, 0.4rem + 0.3vw, 0.8rem);
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: clamp(0.4rem, 0.3rem + 0.2vw, 0.6rem);
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
+  font-size: clamp(0.75rem, 0.7rem + 0.15vw, 0.85rem);
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-checkbox input[type="checkbox"] {
+  width: clamp(0.9rem, 0.8rem + 0.2vw, 1.1rem);
+  height: clamp(0.9rem, 0.8rem + 0.2vw, 1.1rem);
+  cursor: pointer;
+  accent-color: #38bdf8;
+}
+
+.filter-checkbox:hover {
+  color: #e5e7eb;
 }
 
 .app-main {

@@ -137,6 +137,24 @@ class MayaOutlinerAPI:
             print(f"[MayaOutlinerAPI] Error selecting node: {e}")
             return {"ok": False, "message": str(e)}
 
+    def select_multiple_nodes(self, node_names: List[str]) -> Dict[str, Any]:
+        """Select multiple nodes in Maya.
+
+        Args:
+            node_names: List of node names to select
+
+        Returns:
+            Result dictionary with success status
+        """
+        print(f"[MayaOutlinerAPI] select_multiple_nodes called: {node_names}")
+        try:
+            if MAYA_AVAILABLE:
+                cmds.select(node_names, replace=True)
+            return {"ok": True, "message": f"Selected {len(node_names)} nodes"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error selecting multiple nodes: {e}")
+            return {"ok": False, "message": str(e)}
+
     def set_visibility(self, node_name: str, visible: bool = True) -> Dict[str, Any]:
         """Set node visibility in Maya.
 
