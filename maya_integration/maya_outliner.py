@@ -247,6 +247,132 @@ class MayaOutlinerAPI:
             print(f"[MayaOutlinerAPI] Error deleting node: {e}")
             return {"ok": False, "message": str(e)}
 
+    def group_nodes(self, node_name: str) -> Dict[str, Any]:
+        """Group selected nodes (成组).
+
+        Args:
+            node_name: Name of the node (will group current selection)
+
+        Returns:
+            Result dictionary with success status and group name
+        """
+        print(f"[MayaOutlinerAPI] group_nodes called: {node_name}")
+        try:
+            if MAYA_AVAILABLE:
+                # Select the node first
+                cmds.select(node_name, replace=True)
+                # Group the selection
+                group_name = cmds.group(name=f"{node_name}_grp")
+                return {"ok": True, "message": f"Grouped: {group_name}", "group_name": group_name}
+            return {"ok": True, "message": "Group created (standalone mode)"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error grouping nodes: {e}")
+            return {"ok": False, "message": str(e)}
+
+    def ungroup_nodes(self, node_name: str) -> Dict[str, Any]:
+        """Ungroup nodes (取消成组).
+
+        Args:
+            node_name: Name of the group to ungroup
+
+        Returns:
+            Result dictionary with success status
+        """
+        print(f"[MayaOutlinerAPI] ungroup_nodes called: {node_name}")
+        try:
+            if MAYA_AVAILABLE:
+                cmds.ungroup(node_name)
+            return {"ok": True, "message": f"Ungrouped: {node_name}"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error ungrouping nodes: {e}")
+            return {"ok": False, "message": str(e)}
+
+    def parent_nodes(self, child_name: str, parent_name: str = None) -> Dict[str, Any]:
+        """Parent node to another node or to world (父级).
+
+        Args:
+            child_name: Name of the child node
+            parent_name: Name of the parent node (None for world)
+
+        Returns:
+            Result dictionary with success status
+        """
+        print(f"[MayaOutlinerAPI] parent_nodes called: child={child_name}, parent={parent_name}")
+        try:
+            if MAYA_AVAILABLE:
+                if parent_name:
+                    cmds.parent(child_name, parent_name)
+                    return {"ok": True, "message": f"Parented {child_name} to {parent_name}"}
+                else:
+                    cmds.parent(child_name, world=True)
+                    return {"ok": True, "message": f"Parented {child_name} to world"}
+            return {"ok": True, "message": "Parent operation completed (standalone mode)"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error parenting nodes: {e}")
+            return {"ok": False, "message": str(e)}
+
+    def duplicate_node(self, node_name: str) -> Dict[str, Any]:
+        """Duplicate node (复制).
+
+        Args:
+            node_name: Name of the node to duplicate
+
+        Returns:
+            Result dictionary with success status and new node name
+        """
+        print(f"[MayaOutlinerAPI] duplicate_node called: {node_name}")
+        try:
+            if MAYA_AVAILABLE:
+                duplicated = cmds.duplicate(node_name, returnRootsOnly=True)
+                new_name = duplicated[0] if duplicated else None
+                return {"ok": True, "message": f"Duplicated: {new_name}", "new_name": new_name}
+            return {"ok": True, "message": "Duplicate created (standalone mode)"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error duplicating node: {e}")
+            return {"ok": False, "message": str(e)}
+
+    def rename_node(self, old_name: str, new_name: str) -> Dict[str, Any]:
+        """Rename node (重命名).
+
+        Args:
+            old_name: Current name of the node
+            new_name: New name for the node
+
+        Returns:
+            Result dictionary with success status
+        """
+        print(f"[MayaOutlinerAPI] rename_node called: {old_name} -> {new_name}")
+        try:
+            if MAYA_AVAILABLE:
+                cmds.rename(old_name, new_name)
+            return {"ok": True, "message": f"Renamed: {old_name} -> {new_name}"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error renaming node: {e}")
+            return {"ok": False, "message": str(e)}
+
+    def create_quick_select_set(self, node_name: str, set_name: str = None) -> Dict[str, Any]:
+        """Create quick select set (创建快速选择集).
+
+        Args:
+            node_name: Name of the node to add to set
+            set_name: Name of the set (auto-generated if None)
+
+        Returns:
+            Result dictionary with success status and set name
+        """
+        print(f"[MayaOutlinerAPI] create_quick_select_set called: {node_name}, set={set_name}")
+        try:
+            if MAYA_AVAILABLE:
+                if not set_name:
+                    set_name = f"{node_name}_set"
+                # Create a quick select set
+                new_set = cmds.sets(node_name, name=set_name)
+                return {"ok": True, "message": f"Created set: {new_set}", "set_name": new_set}
+            return {"ok": True, "message": "Quick select set created (standalone mode)"}
+        except Exception as e:
+            print(f"[MayaOutlinerAPI] Error creating quick select set: {e}")
+            return {"ok": False, "message": str(e)}
+
 
 class MayaOutliner:
     """Maya Outliner with AuroraView integration

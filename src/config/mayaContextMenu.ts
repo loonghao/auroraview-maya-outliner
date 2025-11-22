@@ -14,6 +14,14 @@ export function getMayaContextMenuItems(
     showSelected?: (nodeName: string) => Promise<any>
     hideInOutliner?: (nodeName: string) => Promise<any>
     deleteNode?: (nodeName: string) => Promise<any>
+    groupNodes?: (nodeName: string) => Promise<any>
+    ungroupNodes?: (nodeName: string) => Promise<any>
+    parentNodes?: (childName: string, parentName: string | null) => Promise<any>
+    duplicateNode?: (nodeName: string) => Promise<any>
+    renameNode?: (oldName: string, newName: string) => Promise<any>
+    createQuickSelectSet?: (nodeName: string, setName: string | null) => Promise<any>
+    expandAll?: () => void
+    collapseAll?: () => void
   }
 ): ContextMenuItemOrSeparator[] {
   const items: ContextMenuItemOrSeparator[] = []
@@ -64,6 +72,52 @@ export function getMayaContextMenuItems(
 
   items.push({ type: 'separator' })
 
+  // Group operations
+  if (hasExtendedAPI && api.groupNodes) {
+    items.push({
+      label: '成组',
+      action: () => api.groupNodes!(node.name),
+    })
+  }
+
+  if (hasExtendedAPI && api.ungroupNodes) {
+    items.push({
+      label: '取消成组',
+      action: () => api.ungroupNodes!(node.name),
+    })
+  }
+
+  // Parent operations
+  if (hasExtendedAPI && api.parentNodes) {
+    items.push({
+      label: '父级',
+      submenu: [
+        {
+          label: '父级到世界',
+          action: () => api.parentNodes!(node.name, null),
+        },
+      ],
+    })
+  }
+
+  // Duplicate
+  if (hasExtendedAPI && api.duplicateNode) {
+    items.push({
+      label: '复制',
+      action: () => api.duplicateNode!(node.name),
+    })
+  }
+
+  // Delete
+  if (hasExtendedAPI && api.deleteNode) {
+    items.push({
+      label: '删除',
+      action: () => api.deleteNode!(node.name),
+    })
+  }
+
+  items.push({ type: 'separator' })
+
   // Reference (placeholder)
   items.push({
     label: '引用',
@@ -88,14 +142,16 @@ export function getMayaContextMenuItems(
     ],
   })
 
-  // Sets (placeholder)
+  // Sets
   items.push({
     label: '集',
     submenu: [
       {
         label: '创建快速选择集',
-        action: () => {},
-        disabled: true,
+        action: hasExtendedAPI && api.createQuickSelectSet
+          ? () => api.createQuickSelectSet!(node.name, null)
+          : () => {},
+        disabled: !(hasExtendedAPI && api.createQuickSelectSet),
       },
     ],
   })
@@ -105,7 +161,7 @@ export function getMayaContextMenuItems(
     label: '资产',
     submenu: [
       {
-        label: '分配新资产',
+        label: '分配新材质',
         action: () => {},
         disabled: true,
       },
@@ -114,19 +170,19 @@ export function getMayaContextMenuItems(
 
   items.push({ type: 'separator' })
 
-  // Display (placeholder)
+  // Display
   items.push({
     label: '展示',
     submenu: [
       {
         label: '展开所有',
-        action: () => {},
-        disabled: true,
+        action: api.expandAll || (() => {}),
+        disabled: !api.expandAll,
       },
       {
         label: '折叠所有',
-        action: () => {},
-        disabled: true,
+        action: api.collapseAll || (() => {}),
+        disabled: !api.collapseAll,
       },
     ],
   })
