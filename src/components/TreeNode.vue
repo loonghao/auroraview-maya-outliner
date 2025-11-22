@@ -248,9 +248,12 @@ const handleContextMenu = (event: MouseEvent) => {
 }
 
 .node-row.selected {
-  background: radial-gradient(circle at left, rgba(56, 189, 248, 0.28), transparent),
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.35) 0%, rgba(56, 189, 248, 0.15) 100%),
     rgba(15, 23, 42, 0.95);
-  border-left: 2px solid #38bdf8;
+  border-left: 3px solid #38bdf8;
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3),
+              0 2px 8px rgba(56, 189, 248, 0.2);
+  transform: translateX(2px);
 }
 
 .expand-btn {

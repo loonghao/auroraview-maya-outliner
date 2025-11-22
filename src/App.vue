@@ -91,6 +91,70 @@ onMounted(async () => {
 })
 
 const handleKeyDown = async (event: KeyboardEvent) => {
+  // Ctrl+G: Group selected nodes
+  if ((event.ctrlKey || event.metaKey) && event.key === 'g' && selectedNode.value) {
+    event.preventDefault()
+    try {
+      await callAPI('group_nodes', { node_name: selectedNode.value })
+      // Refresh scene
+      const result = await getSceneHierarchy()
+      if (result) {
+        sceneData.value = result
+      }
+    } catch (error) {
+      console.error('[App] Failed to group nodes:', error)
+    }
+    return
+  }
+
+  // Ctrl+Shift+G: Ungroup selected nodes
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'G' && selectedNode.value) {
+    event.preventDefault()
+    try {
+      await callAPI('ungroup_nodes', { node_name: selectedNode.value })
+      // Refresh scene
+      const result = await getSceneHierarchy()
+      if (result) {
+        sceneData.value = result
+      }
+    } catch (error) {
+      console.error('[App] Failed to ungroup nodes:', error)
+    }
+    return
+  }
+
+  // Ctrl+D: Duplicate selected node
+  if ((event.ctrlKey || event.metaKey) && event.key === 'd' && selectedNode.value) {
+    event.preventDefault()
+    try {
+      await callAPI('duplicate_node', { node_name: selectedNode.value })
+      // Refresh scene
+      const result = await getSceneHierarchy()
+      if (result) {
+        sceneData.value = result
+      }
+    } catch (error) {
+      console.error('[App] Failed to duplicate node:', error)
+    }
+    return
+  }
+
+  // Ctrl+P: Parent to world
+  if ((event.ctrlKey || event.metaKey) && event.key === 'p' && selectedNode.value) {
+    event.preventDefault()
+    try {
+      await callAPI('parent_nodes', { child_name: selectedNode.value, parent_name: null })
+      // Refresh scene
+      const result = await getSceneHierarchy()
+      if (result) {
+        sceneData.value = result
+      }
+    } catch (error) {
+      console.error('[App] Failed to parent to world:', error)
+    }
+    return
+  }
+
   // Delete: Delete selected node(s)
   if (event.key === 'Delete' && selectedNode.value) {
     event.preventDefault()
