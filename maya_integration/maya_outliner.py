@@ -56,10 +56,8 @@ except ImportError:
 # Import AuroraView components (following official pattern)
 try:
     from auroraview import AuroraView, QtWebView
-
-    print("[MayaOutliner] ✓ AuroraView imported successfully")
 except ImportError as e:
-    print(f"[MayaOutliner] ✗ Failed to import auroraview: {e}")
+    print(f"[MayaOutliner] Failed to import auroraview: {e}")
     print("[MayaOutliner] Make sure auroraview is installed and PYTHONPATH is set correctly")
     raise
 
@@ -73,11 +71,8 @@ try:
     import maya.OpenMayaUI as omui
     from PySide2.QtWidgets import QDialog, QVBoxLayout, QWidget
     from shiboken2 import wrapInstance
-
-    print("[MayaOutliner] ✓ Maya Qt components available")
 except ImportError as e:
-    print(f"[MayaOutliner] ⚠ Maya Qt components not available: {e}")
-    print("[MayaOutliner] Will use standalone mode")
+    pass  # Will use standalone mode
 
 
 class MayaOutlinerAPI:
@@ -624,20 +619,10 @@ class MayaOutliner:
         Note: emit() expects a dict, so we wrap the hierarchy list in a dict.
         The frontend will unwrap it from event.detail.nodes or event.detail.value.
         """
-        print("\n" + "🔥"*50)
-        print("[MayaOutliner] 🔥 send_scene_update() CALLED!")
-        print("🔥"*50)
-
         if not self.webview:
-            print("[MayaOutliner] ✗ send_scene_update: webview is None!")
-            print("🔥"*50 + "\n")
             return
 
-        print(f"[MayaOutliner] ✓ webview exists: {type(self.webview)}")
-
         hierarchy = self.get_scene_hierarchy()
-        print(f"[MayaOutliner] ✓ Got hierarchy: {len(hierarchy)} root nodes")
-        print(f"[MayaOutliner] Hierarchy preview: {hierarchy[:2] if len(hierarchy) > 0 else 'empty'}")
 
         # IMPORTANT: Frontend expects payload.value (array) or direct array
         # See src/App.vue lines 69-73:
@@ -646,42 +631,10 @@ class MayaOutliner:
         #     : payload && Array.isArray((payload as any).value)
         #       ? (payload as any).value
         #       : []
-        # So we send {"value": hierarchy} to match the expected format
-        print("[MayaOutliner] Calling webview.emit('scene_updated', ...)...")
-
         try:
             self.webview.emit("scene_updated", {"value": hierarchy})
-            print(f"[MayaOutliner] ✓ Scene update emitted and processed automatically")
-
-            # Verify event processor is set
-            if hasattr(self.webview, '_webview') and hasattr(self.webview._webview, '_event_processor'):
-                processor = self.webview._webview._event_processor
-                if processor:
-                    print(f"[MayaOutliner] ✓ Event processor active: {type(processor).__name__}")
-                else:
-                    print("[MayaOutliner] ✗ WARNING: Event processor is None!")
-            else:
-                print("[MayaOutliner] ✗ WARNING: Cannot verify event processor!")
-
-            # Debug: Verify event was sent to JavaScript
-            print("[MayaOutliner] Verifying event delivery to JavaScript...")
-            self.webview.eval_js("""
-                console.log('[Maya Debug] Checking event listeners...');
-                console.log('[Maya Debug] window.auroraview:', window.auroraview);
-                console.log('[Maya Debug] window.auroraview.on:', typeof window.auroraview?.on);
-
-                // Test: Manually trigger the event to see if listeners work
-                console.log('[Maya Debug] Manually triggering scene_updated event...');
-                window.dispatchEvent(new CustomEvent('scene_updated', {
-                    detail: {value: [{name: 'TEST_NODE', type: 'transform'}]}
-                }));
-            """)
-            print("[MayaOutliner] ✓ Debug script executed")
-
         except Exception as e:
-            print(f"[MayaOutliner] ✗ ERROR in emit: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"[MayaOutliner] Error in emit: {e}")
 
     def send_selection_changed(self):
         """Send selection change to frontend.
@@ -714,18 +667,11 @@ class MayaOutliner:
 
         # Selection changed callback
         def on_selection_changed(*_args):
-            print("[MayaOutliner] ✓ Callback triggered: SelectionChanged")
             self.send_selection_changed()
 
         # Scene changed callback
         def on_scene_changed(*_args):
-            print("\n" + "="*80)
-            print("[MayaOutliner] ✓ Callback triggered: Scene changed")
-            print(f"[MayaOutliner] Args: {_args}")
-            print("[MayaOutliner] Updating hierarchy...")
-            print("="*80)
             self.send_scene_update()
-            print("="*80 + "\n")
 
         try:
             # Register callbacks for various scene events
@@ -768,7 +714,6 @@ class MayaOutliner:
                     om.MObject(), on_scene_changed
                 ))
 
-                print("[MayaOutliner] ✓ Registered MDGMessage callbacks for node changes")
             except Exception as e:
                 print(f"[MayaOutliner] Warning: Could not register MDGMessage callbacks: {e}")
 
@@ -783,23 +728,12 @@ class MayaOutliner:
                     on_scene_changed
                 ))
 
-                print("[MayaOutliner] ✓ Registered MDagMessage callbacks for hierarchy changes")
             except Exception as e:
                 print(f"[MayaOutliner] Warning: Could not register MDagMessage callbacks: {e}")
 
             self.callback_ids.extend(callbacks)
-            print(f"[MayaOutliner] ✓ Registered {len(callbacks)} Maya callbacks total")
-            print("[MayaOutliner] ✓ Auto-refresh enabled for:")
-            print("  - Object creation/deletion")
-            print("  - Object renaming")
-            print("  - Hierarchy changes")
-            print("  - Scene open/new")
-            print("  - Undo/Redo")
-            print("  - Selection changes")
         except Exception as e:
-            print(f"[MayaOutliner] ✗ Error registering callbacks: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"[MayaOutliner] Error registering callbacks: {e}")
 
     def cleanup_callbacks(self):
         """Remove Maya callbacks"""
@@ -813,7 +747,6 @@ class MayaOutliner:
                 pass
 
         self.callback_ids.clear()
-        print("[MayaOutliner] Maya callbacks removed")
 
     @classmethod
     def _get_or_create_singleton(cls, singleton_key: str, factory_fn) -> "MayaOutliner":
@@ -834,7 +767,6 @@ class MayaOutliner:
         # Check if instance already exists
         if singleton_key in cls._instances:
             existing = cls._instances[singleton_key]
-            print(f"[MayaOutliner] Singleton '{singleton_key}' already exists")
 
             # Consider the instance "alive" only when the dialog is still visible.
             dialog = getattr(existing, "dialog", None)
@@ -849,21 +781,18 @@ class MayaOutliner:
 
             if webview is not None and dialog_visible:
                 # Window is still open → just reuse it and skip creating a new one
-                print("[MayaOutliner] Existing dialog is visible, returning existing singleton instance")
                 return existing
 
             # Otherwise treat it as closed/stale and recreate on the next call
-            print("[MayaOutliner] Existing singleton is not active (dialog hidden or webview missing); closing and recreating")
             try:
                 existing.close()
             except Exception as e:
-                print(f"[MayaOutliner] Error while closing existing singleton: {e}")
+                pass
 
             if singleton_key in cls._instances and cls._instances[singleton_key] is existing:
                 del cls._instances[singleton_key]
 
         # Create new instance
-        print(f"[MayaOutliner] Creating new singleton instance: '{singleton_key}'")
         instance = factory_fn()
         instance._singleton_key = singleton_key
         cls._instances[singleton_key] = instance
@@ -873,7 +802,6 @@ class MayaOutliner:
         """Remove this instance from singleton registry"""
         if self._singleton_key and self._singleton_key in self._instances:
             del self._instances[self._singleton_key]
-            print(f"[MayaOutliner] Removed from singleton registry: '{self._singleton_key}'")
 
     def run(self, url: Optional[str] = None, use_local: bool = False):
         """Run the Maya Outliner WebView
@@ -915,19 +843,11 @@ class MayaOutliner:
                 index_html = os.path.join(dist_dir, "index.html")
                 if os.path.exists(index_html):
                     url = f"file:///{os.path.abspath(index_html).replace(os.sep, '/')}"
-                    print(f"[MayaOutliner] Using local build: {url}")
                 else:
-                    print(f"[MayaOutliner] Warning: Local build not found at {dist_dir}")
-                    print("[MayaOutliner] Run 'npm run build' to create local build")
-                    print("[MayaOutliner] Falling back to dev server")
                     url = "http://localhost:5173"
             else:
                 # Use dev server
                 url = "http://localhost:5173"
-                print(f"[MayaOutliner] Using dev server: {url}")
-
-        print("[MayaOutliner] Creating WebView...")
-        print("[MayaOutliner] Backend: Qt (QtWebView)")
 
         # Get Maya main window as QWidget (for Qt backend)
         maya_window = None
@@ -938,18 +858,8 @@ class MayaOutliner:
                 if main_window_ptr:
                     # Wrap the pointer to get the QWidget
                     maya_window = wrapInstance(int(main_window_ptr), QWidget)
-                    print(f"[MayaOutliner] ✓ Maya main window found")
-                else:
-                    print("[MayaOutliner] ✗ Could not get Maya main window pointer")
-            else:
-                print("[MayaOutliner] ✗ Maya Qt not available")
         except Exception as e:
-            print(f"[MayaOutliner] ✗ Failed to get Maya window: {e}")
-            import traceback
-            traceback.print_exc()
-
-        # Create Qt WebView (following official AuroraView pattern)
-        print("[MayaOutliner] Creating Qt WebView...")
+            pass
 
         if maya_window is None:
             raise RuntimeError("Maya main window not found. Cannot create Qt WebView.")
@@ -968,7 +878,7 @@ class MayaOutliner:
         layout.setContentsMargins(6, 6, 6, 6)
 
         # Create QtWebView as child widget (parent is dialog)
-        # ✨ Event processing is automatic with QtWebView!
+        # Event processing is automatic with QtWebView!
         # No need to call process_events() or create scriptJobs.
         self.webview = QtWebView(
             self.dialog,
@@ -988,37 +898,28 @@ class MayaOutliner:
             _view=self.webview,
             _keep_alive_root=self.dialog,
         )
-        print("[MayaOutliner] ✓ API bound to auroraview.api.* via AuroraView wrapper")
 
         # Load URL
         self.webview.load_url(url)
-        print(f"[MayaOutliner] ✓ URL loaded: {url}")
 
         # Show WebView (following official pattern)
         self.webview.show()
-        print("[MayaOutliner] ✓ WebView shown")
 
         # Setup Maya callbacks
         self.setup_maya_callbacks()
 
         # Show QDialog (simplified - Qt backend only)
-        print("[MayaOutliner] Showing dialog...")
         self.dialog.show()
-        print("[MayaOutliner] ✓ Maya Outliner is running!")
-        print("[MayaOutliner] Use outliner.close() to close the window")
 
     def close(self):
         """Close the WebView window and cleanup (simplified - Qt backend only)"""
         if self._is_closing:
-            print("[MayaOutliner] Already closing, skipping...")
             return
 
         if self.dialog is None and self.webview is None:
-            print("[MayaOutliner] Nothing to close")
             self._remove_from_registry()
             return
 
-        print("[MayaOutliner] Closing...")
         self._is_closing = True
 
         try:
@@ -1029,7 +930,6 @@ class MayaOutliner:
             if self.dialog is not None:
                 self.dialog.close()
                 self.dialog = None
-                print("[MayaOutliner] ✓ QDialog closed")
 
             # Clear references
             self.auroraview = None
@@ -1039,12 +939,8 @@ class MayaOutliner:
             # Remove from singleton registry
             self._remove_from_registry()
 
-            print("[MayaOutliner] ✓ Cleanup complete")
-
         except Exception as e:
-            print(f"[MayaOutliner] ✗ Error closing: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"[MayaOutliner] Error closing: {e}")
         finally:
             self._is_closing = False
 
@@ -1118,13 +1014,6 @@ def main(
     print("=" * 60)
     print()
 
-    if not MAYA_AVAILABLE:
-        print("⚠ Warning: Running without Maya (using mock data)")
-        print()
-
-    print("Backend: Qt (QtWebView)")
-    print()
-
     if singleton:
         # Singleton mode - return existing instance or create new one
         def create_instance():
@@ -1143,19 +1032,8 @@ def main(
 
     print()
     print("=" * 60)
-    print("✓ Maya Outliner started successfully!")
+    print("Maya Outliner started successfully!")
     print("=" * 60)
-    print()
-    print("Tips:")
-    print("  • Click nodes to select them in Maya")
-    print("  • Toggle visibility with the eye icon")
-    print("  • Use search to filter nodes")
-    print("  • Press F12 to open DevTools")
-    print("  • Use outliner.close() to close the window")
-    if singleton:
-        print("  • Singleton mode: Only one instance allowed at a time")
-    else:
-        print("  • Multi-instance mode: Multiple windows can coexist")
     print()
 
     return outliner
