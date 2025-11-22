@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, inject, watch, type Ref } from 'vue'
+import { ref, computed, inject, watch, nextTick, type Ref } from 'vue'
 import type { MayaNode } from '../types'
 
 interface Props {
@@ -9,7 +9,8 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'node-select', nodeName: string): void
+  (e: 'node-select', nodeName: string, event?: MouseEvent): void
+  (e: 'node-rename', nodeName: string, newName: string): void
   (e: 'visibility-toggle', nodeName: string, visible: boolean): void
   (e: 'context-menu', event: MouseEvent, node: MayaNode): void
 }
@@ -49,6 +50,7 @@ const nodeIcon = computed(() => {
     case 'joint':
       return '🦴'
     case 'group':
+      return '📦' // 更改成组图标为包裹盒子
     case 'transform':
       return '📁'
     case 'locator':
@@ -64,8 +66,35 @@ const toggleExpand = () => {
   }
 }
 
-const handleClick = () => {
-  emit('node-select', props.node.name)
+const isRenaming = ref(false)
+const renamingValue = ref('')
+const renameInput = ref<HTMLInputElement | null>(null)
+
+const handleClick = (event: MouseEvent) => {
+  emit('node-select', props.node.name, event)
+}
+
+const handleDoubleClick = async () => {
+  isRenaming.value = true
+  renamingValue.value = props.node.name
+  await nextTick()
+  renameInput.value?.focus()
+  renameInput.value?.select()
+}
+
+const handleRename = () => {
+  if (renamingValue.value && renamingValue.value !== props.node.name) {
+    emit('node-rename', props.node.name, renamingValue.value)
+  }
+  isRenaming.value = false
+}
+
+const handleRenameKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    handleRename()
+  } else if (event.key === 'Escape') {
+    isRenaming.value = false
+  }
 }
 
 const toggleVisibility = (event: Event) => {
@@ -87,6 +116,7 @@ const handleContextMenu = (event: MouseEvent) => {
       :class="{ selected: isSelected }"
       :style="{ paddingLeft: `${level * 20 + 8}px` }"
       @click="handleClick"
+      @dblclick="handleDoubleClick"
       @contextmenu="handleContextMenu"
     >
       <button
@@ -100,13 +130,25 @@ const handleContextMenu = (event: MouseEvent) => {
       <span v-else class="expand-spacer"></span>
 
       <span class="node-icon">{{ nodeIcon }}</span>
-      <span class="node-name">{{ node.name }}</span>
+
+      <!-- Rename input -->
+      <input
+        v-if="isRenaming"
+        v-model="renamingValue"
+        class="node-name-input"
+        @blur="handleRename"
+        @keydown="handleRenameKeydown"
+        @click.stop
+        ref="renameInput"
+      />
+      <span v-else class="node-name">{{ node.name }}</span>
+
       <span class="node-type">{{ node.type }}</span>
 
       <button
         class="visibility-btn"
         :class="{ hidden: !node.visible }"
-        @click="toggleVisibility"
+        @click.stop="toggleVisibility"
         :title="node.visible ? 'Hide' : 'Show'"
       >
         {{ node.visible ? '👁️' : '🚫' }}
@@ -120,7 +162,8 @@ const handleContextMenu = (event: MouseEvent) => {
         :node="child"
         :selected-node="selectedNode"
         :level="level + 1"
-        @node-select="(nodeName) => emit('node-select', nodeName)"
+        @node-select="(nodeName, event) => emit('node-select', nodeName, event)"
+        @node-rename="(oldName, newName) => emit('node-rename', oldName, newName)"
         @visibility-toggle="(nodeName, visible) => emit('visibility-toggle', nodeName, visible)"
         @context-menu="(event, node) => emit('context-menu', event, node)"
       />
@@ -192,6 +235,17 @@ const handleContextMenu = (event: MouseEvent) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.node-name-input {
+  flex: 1;
+  font-size: clamp(0.8rem, 0.75rem + 0.15vw, 0.95rem);
+  color: #e5e7eb;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid #38bdf8;
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
 }
 
 .node-type {

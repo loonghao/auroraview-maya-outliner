@@ -10,7 +10,8 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'node-select', nodeName: string): void
+  (e: 'node-select', nodeName: string, event?: MouseEvent): void
+  (e: 'node-rename', oldName: string, newName: string): void
   (e: 'visibility-toggle', nodeName: string, visible: boolean): void
   (e: 'context-menu', event: MouseEvent, node: MayaNode): void
 }
@@ -53,8 +54,12 @@ const filteredNodes = computed(() => {
     .filter((n): n is MayaNode => n !== null)
 })
 
-const handleNodeSelect = (nodeName: string) => {
-  emit('node-select', nodeName)
+const handleNodeSelect = (nodeName: string, event?: MouseEvent) => {
+  emit('node-select', nodeName, event)
+}
+
+const handleNodeRename = (oldName: string, newName: string) => {
+  emit('node-rename', oldName, newName)
 }
 
 const handleVisibilityToggle = (nodeName: string, visible: boolean) => {
@@ -81,6 +86,7 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
         :selected-node="selectedNode"
         :level="0"
         @node-select="handleNodeSelect"
+        @node-rename="handleNodeRename"
         @visibility-toggle="handleVisibilityToggle"
         @context-menu="handleContextMenu"
       />
