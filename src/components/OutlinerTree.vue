@@ -7,6 +7,8 @@ interface Props {
   nodes: MayaNode[]
   selectedNode: string | null
   searchQuery: string
+  showDagOnly?: boolean
+  showHidden?: boolean
 }
 
 interface Emits {
@@ -23,23 +25,42 @@ const emit = defineEmits<Emits>()
 console.log('[OutlinerTree] props.nodes:', props.nodes)
 console.log('[OutlinerTree] props.nodes length:', props.nodes?.length)
 
-// Filter nodes based on search query
+// DAG node types (visible when showDagOnly is true)
+const DAG_NODE_TYPES = new Set([
+  'transform', 'mesh', 'camera', 'light', 'group', 'joint', 'locator',
+  'nurbsCurve', 'nurbsSurface', 'ikHandle', 'particleCloud'
+])
+
+// Filter nodes based on search query and display options
 const filteredNodes = computed(() => {
   console.log('[OutlinerTree] Computing filteredNodes, nodes:', props.nodes)
   console.log('[OutlinerTree] searchQuery:', props.searchQuery)
+  console.log('[OutlinerTree] showDagOnly:', props.showDagOnly)
+  console.log('[OutlinerTree] showHidden:', props.showHidden)
 
-  if (!props.searchQuery) {
-    return props.nodes
-  }
+  const query = props.searchQuery?.toLowerCase() || ''
 
-  const query = props.searchQuery.toLowerCase()
   const filterNode = (node: MayaNode): MayaNode | null => {
-    const matches = node.name.toLowerCase().includes(query)
+    // Filter by DAG type
+    if (props.showDagOnly && !DAG_NODE_TYPES.has(node.type)) {
+      return null
+    }
+
+    // Filter by visibility
+    if (!props.showHidden && !node.visible) {
+      return null
+    }
+
+    // Filter by search query
+    const matchesSearch = !query || node.name.toLowerCase().includes(query)
+
+    // Recursively filter children
     const filteredChildren = node.children
       .map(filterNode)
       .filter((n): n is MayaNode => n !== null)
 
-    if (matches || filteredChildren.length > 0) {
+    // Include node if it matches or has matching children
+    if (matchesSearch || filteredChildren.length > 0) {
       return {
         ...node,
         children: filteredChildren,

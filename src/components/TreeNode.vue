@@ -41,20 +41,73 @@ watch(collapseAllTrigger, () => {
 
 const nodeIcon = computed(() => {
   switch (props.node.type) {
+    // Geometry
     case 'mesh':
       return '🔷'
+    case 'nurbsCurve':
+      return '〰️'
+    case 'nurbsSurface':
+      return '🌊'
+
+    // Cameras and Lights
     case 'camera':
       return '📷'
     case 'light':
       return '💡'
+
+    // Animation
     case 'joint':
       return '🦴'
+    case 'ikHandle':
+      return '🔗'
+    case 'ikSolver':
+      return '⚙️'
+    case 'constraint':
+      return '🔒'
+    case 'controller':
+      return '🎮'
+
+    // Deformers
+    case 'cluster':
+      return '🎯'
+    case 'blendShape':
+      return '🎭'
+    case 'skinCluster':
+      return '🦴'
+
+    // Sets and Layers
+    case 'objectSet':
+      return '📦'
+    case 'displayLayer':
+      return '📋'
+    case 'renderLayer':
+      return '🎬'
+    case 'animLayer':
+      return '🎞️'
+
+    // Shaders and Textures
+    case 'shader':
+    case 'lambert':
+    case 'blinn':
+    case 'phong':
+      return '🌈'
+    case 'file':
+      return '🖼️'
+    case 'place2dTexture':
+      return '📐'
+
+    // Particles
+    case 'particleCloud':
+      return '☁️'
+
+    // Hierarchy
     case 'group':
-      return '📦' // 更改成组图标为包裹盒子
+      return '📦'
     case 'transform':
       return '📁'
     case 'locator':
       return '📍'
+
     default:
       return '📄'
   }

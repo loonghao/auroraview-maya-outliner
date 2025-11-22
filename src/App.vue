@@ -85,7 +85,37 @@ onMounted(async () => {
     const node = EventDataAdapter.extractString(data, 'node', 'name')
     selectedNode.value = node
   })
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', handleKeyDown)
 })
+
+const handleKeyDown = async (event: KeyboardEvent) => {
+  // Delete: Delete selected node(s)
+  if (event.key === 'Delete' && selectedNode.value) {
+    event.preventDefault()
+    try {
+      if (selectedNodes.value.size > 1) {
+        // Delete multiple nodes
+        for (const nodeName of selectedNodes.value) {
+          await callAPI('delete_node', { node_name: nodeName })
+        }
+      } else {
+        // Delete single node
+        await callAPI('delete_node', { node_name: selectedNode.value })
+      }
+      // Refresh scene
+      const result = await getSceneHierarchy()
+      if (result) {
+        sceneData.value = result
+      }
+      selectedNode.value = null
+      selectedNodes.value.clear()
+    } catch (error) {
+      console.error('[App] Failed to delete node:', error)
+    }
+  }
+}
 
 const handleNodeSelect = async (nodeName: string, event?: MouseEvent) => {
   // Multi-selection support
@@ -251,6 +281,8 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
               :nodes="sceneData"
               :selected-node="selectedNode"
               :search-query="searchQuery"
+              :show-dag-only="showDAGOnly"
+              :show-hidden="showHidden"
               @node-select="handleNodeSelect"
               @node-rename="handleNodeRename"
               @visibility-toggle="handleVisibilityToggle"
