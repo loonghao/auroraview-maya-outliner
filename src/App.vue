@@ -22,8 +22,8 @@ const isConnected = ref(false)
 const isUpdating = ref(false)
 
 // Display filters
-const showDAGOnly = ref(true) // Show DAG objects only
-const showHidden = ref(false) // Show hidden objects
+const showDAGOnly = ref(false) // Show DAG objects only (default: show all)
+const showHidden = ref(true) // Show hidden objects (default: show all)
 
 // Tree expansion state
 const expandAllTrigger = ref(0)
