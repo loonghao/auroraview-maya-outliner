@@ -462,19 +462,94 @@ class MayaOutliner:
         node_type = cmds.nodeType(node)
 
         # Map Maya node types to simplified types
+        # For DAG nodes, preserve the actual type for filtering
         type_mapping = {
+            # Geometry
             "mesh": "mesh",
-            "camera": "camera",
-            "light": "light",
+            "nurbsCurve": "nurbsCurve",
+            "nurbsSurface": "nurbsSurface",
+            "subdiv": "subdiv",
+
+            # Lights
             "pointLight": "light",
             "directionalLight": "light",
             "spotLight": "light",
+            "areaLight": "light",
+            "volumeLight": "light",
+            "ambientLight": "light",
+
+            # Cameras
+            "camera": "camera",
+
+            # Deformers
             "joint": "joint",
+            "ikHandle": "ikHandle",
+            "ikEffector": "ikEffector",
+            "cluster": "cluster",
+            "blendShape": "blendShape",
+            "lattice": "lattice",
+            "wrap": "wrap",
+            "nonLinear": "nonLinear",
+
+            # Locators and helpers
             "locator": "locator",
+            "annotationShape": "annotation",
+
+            # Particles and dynamics
+            "particle": "particle",
+            "particleCloud": "particleCloud",
+            "nParticle": "nParticle",
+            "nucleus": "nucleus",
+            "nCloth": "nCloth",
+            "nRigid": "nRigid",
+
+            # Constraints
+            "parentConstraint": "constraint",
+            "pointConstraint": "constraint",
+            "orientConstraint": "constraint",
+            "scaleConstraint": "constraint",
+            "aimConstraint": "constraint",
+            "poleVectorConstraint": "constraint",
+
+            # Transform and grouping
             "transform": "transform",
+
+            # Display layers
+            "displayLayer": "displayLayer",
+            "renderLayer": "renderLayer",
+
+            # Sets
+            "objectSet": "set",
+            "character": "character",
+
+            # Shading
+            "shadingEngine": "shadingEngine",
+            "lambert": "shader",
+            "blinn": "shader",
+            "phong": "shader",
+            "standardSurface": "shader",
+            "aiStandardSurface": "shader",
+
+            # Textures
+            "file": "texture",
+            "place2dTexture": "texture",
+            "place3dTexture": "texture",
         }
 
-        return type_mapping.get(node_type, "unknown")
+        # Return mapped type or original type for DAG nodes
+        # This preserves the actual Maya type for better filtering
+        mapped_type = type_mapping.get(node_type, node_type)
+
+        # Check if it's a DAG node
+        try:
+            if cmds.objectType(node, isAType='dagNode'):
+                # For DAG nodes, return the mapped type or original type
+                return mapped_type
+        except Exception:
+            pass
+
+        # For non-DAG nodes (DG nodes), return the mapped type
+        return mapped_type
 
     def get_scene_hierarchy(self) -> List[Dict[str, Any]]:
         """Get the complete scene hierarchy"""
