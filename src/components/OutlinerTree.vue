@@ -21,10 +21,6 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-// Debug: 监听 props.nodes 的变化
-console.log('[OutlinerTree] props.nodes:', props.nodes)
-console.log('[OutlinerTree] props.nodes length:', props.nodes?.length)
-
 // DAG node types (visible when showDagOnly is true)
 const DAG_NODE_TYPES = new Set([
   'transform', 'mesh', 'camera', 'light', 'group', 'joint', 'locator',
@@ -33,11 +29,6 @@ const DAG_NODE_TYPES = new Set([
 
 // Filter nodes based on search query and display options
 const filteredNodes = computed(() => {
-  console.log('[OutlinerTree] Computing filteredNodes, nodes:', props.nodes)
-  console.log('[OutlinerTree] searchQuery:', props.searchQuery)
-  console.log('[OutlinerTree] showDagOnly:', props.showDagOnly)
-  console.log('[OutlinerTree] showHidden:', props.showHidden)
-
   const query = props.searchQuery?.toLowerCase() || ''
 
   const filterNode = (node: MayaNode): MayaNode | null => {
