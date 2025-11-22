@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, inject, watch, type Ref } from 'vue'
 import type { MayaNode } from '../types'
 
 interface Props {
@@ -20,6 +20,23 @@ const emit = defineEmits<Emits>()
 const isExpanded = ref(true)
 const hasChildren = computed(() => props.node.children.length > 0)
 const isSelected = computed(() => props.node.name === props.selectedNode)
+
+// Inject expansion triggers
+const expandAllTrigger = inject<Ref<number>>('expandAllTrigger', ref(0))
+const collapseAllTrigger = inject<Ref<number>>('collapseAllTrigger', ref(0))
+
+// Watch for expansion triggers
+watch(expandAllTrigger, () => {
+  if (hasChildren.value) {
+    isExpanded.value = true
+  }
+})
+
+watch(collapseAllTrigger, () => {
+  if (hasChildren.value) {
+    isExpanded.value = false
+  }
+})
 
 const nodeIcon = computed(() => {
   switch (props.node.type) {

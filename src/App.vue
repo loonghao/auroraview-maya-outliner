@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, provide } from 'vue'
 import OutlinerTree from './components/OutlinerTree.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import { useMayaIPC } from './composables/useMayaIPC'
@@ -19,6 +19,22 @@ const selectedNode = ref<string | null>(null)
 const searchQuery = ref('')
 const isConnected = ref(false)
 const isUpdating = ref(false)
+
+// Tree expansion state
+const expandAllTrigger = ref(0)
+const collapseAllTrigger = ref(0)
+
+// Provide expansion triggers to child components
+provide('expandAllTrigger', expandAllTrigger)
+provide('collapseAllTrigger', collapseAllTrigger)
+
+const expandAll = () => {
+  expandAllTrigger.value++
+}
+
+const collapseAll = () => {
+  collapseAllTrigger.value++
+}
 
 onMounted(async () => {
   // Wait for AuroraView API to be ready
@@ -104,6 +120,26 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
     deleteNode: async (nodeName: string) => {
       return callAPI('delete_node', { node_name: nodeName })
     },
+    groupNodes: async (nodeName: string) => {
+      return callAPI('group_nodes', { node_name: nodeName })
+    },
+    ungroupNodes: async (nodeName: string) => {
+      return callAPI('ungroup_nodes', { node_name: nodeName })
+    },
+    parentNodes: async (childName: string, parentName: string | null) => {
+      return callAPI('parent_nodes', { child_name: childName, parent_name: parentName })
+    },
+    duplicateNode: async (nodeName: string) => {
+      return callAPI('duplicate_node', { node_name: nodeName })
+    },
+    renameNode: async (oldName: string, newName: string) => {
+      return callAPI('rename_node', { old_name: oldName, new_name: newName })
+    },
+    createQuickSelectSet: async (nodeName: string, setName: string | null) => {
+      return callAPI('create_quick_select_set', { node_name: nodeName, set_name: setName })
+    },
+    expandAll,
+    collapseAll,
   }
 
   const menuItems = getMayaContextMenuItems(node, api)
