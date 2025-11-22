@@ -124,7 +124,7 @@ export class EventDataAdapter {
    * @param possibleKeys - Keys to try when data is nested
    * @returns Extracted object or empty object if extraction fails
    */
-  static extractObject<T extends Record<string, unknown>>(data: unknown, ...possibleKeys: string[]): T {
+  static extractObject<T extends Record<string, unknown>>(data: unknown, ...possibleKeys: string[]): T {      
     // Case 1: Direct object
     if (data && typeof data === 'object' && !Array.isArray(data)) {
       // If no keys specified, return the object directly
@@ -145,3 +145,4 @@ export class EventDataAdapter {
     return {} as T
   }
 }
+
