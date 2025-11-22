@@ -22,9 +22,35 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 // DAG node types (visible when showDagOnly is true)
+// These are all Maya DAG (Directed Acyclic Graph) nodes that appear in the scene hierarchy
 const DAG_NODE_TYPES = new Set([
-  'transform', 'mesh', 'camera', 'light', 'group', 'joint', 'locator',
-  'nurbsCurve', 'nurbsSurface', 'ikHandle', 'particleCloud'
+  // Transform and grouping
+  'transform', 'group',
+
+  // Geometry
+  'mesh', 'nurbsCurve', 'nurbsSurface', 'subdiv',
+
+  // Lights
+  'light', 'pointLight', 'directionalLight', 'spotLight', 'areaLight', 'volumeLight', 'ambientLight',
+
+  // Cameras
+  'camera',
+
+  // Deformers
+  'joint', 'ikHandle', 'ikEffector', 'cluster', 'blendShape', 'lattice', 'wrap', 'nonLinear',
+
+  // Locators and helpers
+  'locator', 'annotation',
+
+  // Particles and dynamics
+  'particle', 'particleCloud', 'nParticle', 'nucleus', 'nCloth', 'nRigid',
+
+  // Constraints
+  'constraint', 'parentConstraint', 'pointConstraint', 'orientConstraint',
+  'scaleConstraint', 'aimConstraint', 'poleVectorConstraint',
+
+  // Display layers (DAG nodes)
+  'displayLayer', 'renderLayer'
 ])
 
 // Filter nodes based on search query and display options
