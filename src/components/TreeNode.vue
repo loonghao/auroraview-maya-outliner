@@ -39,77 +39,78 @@ watch(collapseAllTrigger, () => {
   }
 })
 
-const nodeIcon = computed(() => {
+// Get node icon class based on type
+const nodeIconClass = computed(() => {
   switch (props.node.type) {
     // Geometry
     case 'mesh':
-      return '🔷'
+      return 'icon-mesh'
     case 'nurbsCurve':
-      return '〰️'
+      return 'icon-curve'
     case 'nurbsSurface':
-      return '🌊'
+      return 'icon-surface'
 
     // Cameras and Lights
     case 'camera':
-      return '📷'
+      return 'icon-camera'
     case 'light':
-      return '💡'
+      return 'icon-light'
 
     // Animation
     case 'joint':
-      return '🦴'
+      return 'icon-joint'
     case 'ikHandle':
-      return '🔗'
+      return 'icon-ik-handle'
     case 'ikSolver':
-      return '⚙️'
+      return 'icon-ik-solver'
     case 'constraint':
-      return '🔒'
+      return 'icon-constraint'
     case 'controller':
-      return '🎮'
+      return 'icon-controller'
 
     // Deformers
     case 'cluster':
-      return '🎯'
+      return 'icon-cluster'
     case 'blendShape':
-      return '🎭'
+      return 'icon-blendshape'
     case 'skinCluster':
-      return '🦴'
+      return 'icon-skin'
 
     // Sets and Layers
     case 'objectSet':
-      return '📦'
+      return 'icon-set'
     case 'displayLayer':
-      return '📋'
+      return 'icon-layer'
     case 'renderLayer':
-      return '🎬'
+      return 'icon-render-layer'
     case 'animLayer':
-      return '🎞️'
+      return 'icon-anim-layer'
 
     // Shaders and Textures
     case 'shader':
     case 'lambert':
     case 'blinn':
     case 'phong':
-      return '🌈'
+      return 'icon-shader'
     case 'file':
-      return '🖼️'
+      return 'icon-texture'
     case 'place2dTexture':
-      return '📐'
+      return 'icon-uv'
 
     // Particles
     case 'particleCloud':
-      return '☁️'
+      return 'icon-particle'
 
     // Hierarchy
     case 'group':
-      return '📦'
+      return 'icon-group'
     case 'transform':
-      return '📁'
+      return 'icon-transform'
     case 'locator':
-      return '📍'
+      return 'icon-locator'
 
     default:
-      return '📄'
+      return 'icon-default'
   }
 })
 
@@ -182,7 +183,7 @@ const handleContextMenu = (event: MouseEvent) => {
       </button>
       <span v-else class="expand-spacer"></span>
 
-      <span class="node-icon">{{ nodeIcon }}</span>
+      <span class="node-icon" :class="nodeIconClass"></span>
 
       <!-- Rename input -->
       <input
@@ -204,7 +205,7 @@ const handleContextMenu = (event: MouseEvent) => {
         @click.stop="toggleVisibility"
         :title="node.visible ? 'Hide' : 'Show'"
       >
-        {{ node.visible ? '👁️' : '🚫' }}
+        <span class="visibility-icon" :class="node.visible ? 'icon-visible' : 'icon-hidden'"></span>
       </button>
     </div>
 
@@ -277,8 +278,46 @@ const handleContextMenu = (event: MouseEvent) => {
 }
 
 .node-icon {
-  font-size: clamp(0.85rem, 0.8rem + 0.15vw, 1rem);
+  width: clamp(0.9rem, 0.85rem + 0.15vw, 1.1rem);
+  height: clamp(0.9rem, 0.85rem + 0.15vw, 1.1rem);
   flex-shrink: 0;
+  display: inline-block;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+/* Node type icons */
+.icon-mesh { background-color: #60a5fa; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1l7 4v6l-7 4-7-4V5l7-4z' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-camera { background-color: #a78bfa; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='4' width='12' height='9' rx='1' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3Cpath d='M5 4L6 2h4l1 2' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3Ccircle cx='8' cy='8.5' r='2' fill='currentColor'/%3E%3C/svg%3E"); }
+.icon-light { background-color: #fbbf24; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='currentColor'/%3E%3Cpath d='M8 1v2M8 13v2M15 8h-2M3 8H1M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4M12.5 12.5l-1.4-1.4M4.9 4.9L3.5 3.5' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-joint { background-color: #f472b6; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='2.5' fill='currentColor'/%3E%3Cpath d='M8 2v3.5M8 10.5V14M2 8h3.5M10.5 8H14' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-group { background-color: #fb923c; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 2h10v10H3z' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3Cpath d='M5 5h6v6H5z' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-transform { background-color: #fbbf24; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 2h12v12H2z' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-locator { background-color: #34d399; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='1.5' fill='currentColor'/%3E%3Cpath d='M8 1v3M8 12v3M1 8h3M12 8h3' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-curve { background-color: #60a5fa; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 12Q4 2 8 8T14 4' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-surface { background-color: #60a5fa; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 4Q8 2 14 4M2 8Q8 6 14 8M2 12Q8 10 14 12' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-set { background-color: #a78bfa; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='2' width='5' height='5' rx='1' fill='currentColor'/%3E%3Crect x='9' y='2' width='5' height='5' rx='1' fill='currentColor'/%3E%3Crect x='2' y='9' width='5' height='5' rx='1' fill='currentColor'/%3E%3Crect x='9' y='9' width='5' height='5' rx='1' fill='currentColor'/%3E%3C/svg%3E"); }
+.icon-layer { background-color: #60a5fa; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 4l6-2 6 2-6 2-6-2zM2 8l6 2 6-2M2 12l6 2 6-2' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-shader { background-color: #f472b6; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3Cpath d='M8 3v10M3 8h10' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-constraint { background-color: #fb923c; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6h8M4 10h8' stroke='currentColor' stroke-width='1.5'/%3E%3Ccircle cx='4' cy='6' r='1.5' fill='currentColor'/%3E%3Ccircle cx='12' cy='10' r='1.5' fill='currentColor'/%3E%3C/svg%3E"); }
+.icon-ik-handle { background-color: #34d399; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 3l5 5-5 5M8 8l5-5M8 8l5 5' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+.icon-default { background-color: #94a3b8; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='2' width='10' height='12' rx='1' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3Cpath d='M6 6h4M6 9h4' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E"); }
+
+/* Add more icon types as needed */
+.icon-cluster,
+.icon-blendshape,
+.icon-skin,
+.icon-render-layer,
+.icon-anim-layer,
+.icon-texture,
+.icon-uv,
+.icon-particle,
+.icon-controller,
+.icon-ik-solver {
+  background-color: #94a3b8;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='4' fill='currentColor'/%3E%3C/svg%3E");
 }
 
 .node-name {
@@ -312,15 +351,17 @@ const handleContextMenu = (event: MouseEvent) => {
 }
 
 .visibility-btn {
-  width: clamp(1.25rem, 1.1rem + 0.5vw, 1.75rem);
-  height: clamp(1.25rem, 1.1rem + 0.5vw, 1.75rem);
+  width: clamp(1.1rem, 1rem + 0.3vw, 1.4rem);
+  height: clamp(1.1rem, 1rem + 0.3vw, 1.4rem);
   padding: 0;
   background: none;
   border: none;
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.15s ease-out, transform 0.12s ease-out;
-  font-size: clamp(0.85rem, 0.8rem + 0.2vw, 1.05rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .visibility-btn:hover {
@@ -330,6 +371,25 @@ const handleContextMenu = (event: MouseEvent) => {
 
 .visibility-btn.hidden {
   opacity: 0.35;
+}
+
+.visibility-icon {
+  width: 100%;
+  height: 100%;
+  display: inline-block;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.icon-visible {
+  background-color: #60a5fa;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 3C4.5 3 1.5 6 1 8c.5 2 3.5 5 7 5s6.5-3 7-5c-.5-2-3.5-5-7-5z' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3Ccircle cx='8' cy='8' r='2' fill='currentColor'/%3E%3C/svg%3E");
+}
+
+.icon-hidden {
+  background-color: #94a3b8;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M1 1l14 14M4 4C2.5 5 1.5 6.5 1 8c.5 2 3.5 5 7 5 1 0 2-.3 3-.7M8 3c3.5 0 6.5 3 7 5-.3 1-1 2-2 3' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E");
 }
 
 .node-children {
