@@ -13,6 +13,7 @@ interface Emits {
   (e: 'node-rename', nodeName: string, newName: string): void
   (e: 'visibility-toggle', nodeName: string, visible: boolean): void
   (e: 'context-menu', event: MouseEvent, node: MayaNode): void
+  (e: 'node-parent', childName: string, parentName: string | null): void
 }
 
 const props = defineProps<Props>()
@@ -21,6 +22,11 @@ const emit = defineEmits<Emits>()
 const isExpanded = ref(true)
 const hasChildren = computed(() => props.node.children.length > 0)
 const isSelected = computed(() => props.node.name === props.selectedNode)
+
+// Drag and drop state
+const isDragging = ref(false)
+const isDragOver = ref(false)
+const dragOverPosition = ref<'top' | 'middle' | 'bottom' | null>(null)
 
 // Inject expansion triggers
 const expandAllTrigger = inject<Ref<number>>('expandAllTrigger', ref(0))
@@ -161,17 +167,119 @@ const handleContextMenu = (event: MouseEvent) => {
   event.stopPropagation()
   emit('context-menu', event, props.node)
 }
+
+// Drag and drop handlers
+const handleDragStart = (event: DragEvent) => {
+  if (!event.dataTransfer) return
+
+  isDragging.value = true
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', props.node.name)
+
+  // Add a custom drag image (optional)
+  if (event.target instanceof HTMLElement) {
+    const dragImage = event.target.cloneNode(true) as HTMLElement
+    dragImage.style.opacity = '0.5'
+    event.dataTransfer.setDragImage(event.target, 0, 0)
+  }
+}
+
+const handleDragEnd = () => {
+  isDragging.value = false
+}
+
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault()
+  if (!event.dataTransfer) return
+
+  event.dataTransfer.dropEffect = 'move'
+  isDragOver.value = true
+
+  // Determine drop position based on mouse Y position
+  const target = event.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+  const y = event.clientY - rect.top
+  const height = rect.height
+
+  // Divide into three zones: top 25%, middle 50%, bottom 25%
+  if (y < height * 0.25) {
+    dragOverPosition.value = 'top'
+  } else if (y > height * 0.75) {
+    dragOverPosition.value = 'bottom'
+  } else {
+    // Middle zone - parent to this node (if it can have children)
+    dragOverPosition.value = 'middle'
+  }
+}
+
+const handleDragLeave = () => {
+  isDragOver.value = false
+  dragOverPosition.value = null
+}
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
+
+  if (!event.dataTransfer) return
+
+  const draggedNodeName = event.dataTransfer.getData('text/plain')
+
+  // Don't allow dropping on itself
+  if (draggedNodeName === props.node.name) {
+    isDragOver.value = false
+    dragOverPosition.value = null
+    return
+  }
+
+  // Don't allow dropping a parent onto its own child
+  if (props.node.path.includes(draggedNodeName)) {
+    isDragOver.value = false
+    dragOverPosition.value = null
+    return
+  }
+
+  // Determine the new parent based on drop position
+  let newParent: string | null = null
+
+  if (dragOverPosition.value === 'middle') {
+    // Parent to this node
+    newParent = props.node.name
+  } else if (dragOverPosition.value === 'top' || dragOverPosition.value === 'bottom') {
+    // Parent to this node's parent (sibling)
+    newParent = props.node.parent || null
+  }
+
+  // Emit parent event
+  emit('node-parent', draggedNodeName, newParent)
+
+  isDragOver.value = false
+  dragOverPosition.value = null
+}
 </script>
 
 <template>
   <div class="tree-node">
     <div
       class="node-row"
-      :class="{ selected: isSelected }"
+      :class="{
+        selected: isSelected,
+        dragging: isDragging,
+        'drag-over': isDragOver,
+        'drag-over-top': isDragOver && dragOverPosition === 'top',
+        'drag-over-middle': isDragOver && dragOverPosition === 'middle',
+        'drag-over-bottom': isDragOver && dragOverPosition === 'bottom'
+      }"
       :style="{ paddingLeft: `${level * 20 + 8}px` }"
+      draggable="true"
       @click="handleClick"
       @dblclick="handleDoubleClick"
       @contextmenu="handleContextMenu"
+      @dragstart="handleDragStart"
+      @dragend="handleDragEnd"
+      @dragover="handleDragOver"
+      @dragleave="handleDragLeave"
+      @drop="handleDrop"
     >
       <button
         v-if="hasChildren"
@@ -220,6 +328,7 @@ const handleContextMenu = (event: MouseEvent) => {
         @node-rename="(oldName, newName) => emit('node-rename', oldName, newName)"
         @visibility-toggle="(nodeName, visible) => emit('visibility-toggle', nodeName, visible)"
         @context-menu="(event, node) => emit('context-menu', event, node)"
+        @node-parent="(childName, parentName) => emit('node-parent', childName, parentName)"
       />
     </div>
   </div>
@@ -254,6 +363,44 @@ const handleContextMenu = (event: MouseEvent) => {
   box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3),
               0 2px 8px rgba(56, 189, 248, 0.2);
   transform: translateX(2px);
+}
+
+/* Drag and drop styles */
+.node-row.dragging {
+  opacity: 0.4;
+  cursor: move;
+}
+
+.node-row.drag-over {
+  position: relative;
+}
+
+.node-row.drag-over-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #38bdf8;
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.6);
+}
+
+.node-row.drag-over-middle {
+  background: rgba(56, 189, 248, 0.2);
+  border: 2px dashed #38bdf8;
+  box-shadow: inset 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.node-row.drag-over-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #38bdf8;
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.6);
 }
 
 .expand-btn {
