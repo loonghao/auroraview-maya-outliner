@@ -981,9 +981,15 @@ class MayaOutliner:
                 super().__init__(parent)
                 self.outliner_instance = outliner_instance
                 self._resize_timer = None
+                self._pending_size = None
 
             def resizeEvent(self, event):
                 super().resizeEvent(event)
+
+                # Extract size immediately before event is deleted
+                size = event.size()
+                self._pending_size = (size.width(), size.height())
+
                 # Debounce resize events to avoid spamming
                 if self._resize_timer:
                     self._resize_timer.stop()
@@ -991,19 +997,18 @@ class MayaOutliner:
                 from qtpy.QtCore import QTimer
                 self._resize_timer = QTimer()
                 self._resize_timer.setSingleShot(True)
-                self._resize_timer.timeout.connect(lambda: self._on_resize_finished(event))
+                self._resize_timer.timeout.connect(self._on_resize_finished)
                 self._resize_timer.start(300)  # 300ms debounce
 
-            def _on_resize_finished(self, event):
+            def _on_resize_finished(self):
                 # Notify frontend about size change
-                if self.outliner_instance and self.outliner_instance.auroraview:
-                    size = event.size()
+                if self.outliner_instance and self.outliner_instance.auroraview and self._pending_size:
                     try:
                         self.outliner_instance.auroraview.send_event(
                             'window_resized',
                             {
-                                'width': size.width(),
-                                'height': size.height()
+                                'width': self._pending_size[0],
+                                'height': self._pending_size[1]
                             }
                         )
                     except Exception:
