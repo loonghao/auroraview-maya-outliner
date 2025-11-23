@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, provide } from 'vue'
+import { ref, onMounted, provide, watch } from 'vue'
 import OutlinerTree from './components/OutlinerTree.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import { useMayaIPC } from './composables/useMayaIPC'
 import { useContextMenu } from './composables/useContextMenu'
 import { getMayaContextMenuItems } from './config/mayaContextMenu'
 import { EventDataAdapter } from './utils/eventAdapter'
+import { storage } from './utils/storage'
 import type { MayaNode } from './types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -41,7 +42,69 @@ const collapseAll = () => {
   collapseAllTrigger.value++
 }
 
+// Load preferences from IndexedDB
+const loadPreferences = async () => {
+  try {
+    const prefs = await storage.getAll()
+
+    if (prefs.showDAGOnly !== undefined) {
+      showDAGOnly.value = prefs.showDAGOnly
+    }
+    if (prefs.showHidden !== undefined) {
+      showHidden.value = prefs.showHidden
+    }
+    if (prefs.windowWidth && prefs.windowHeight) {
+      // Notify Python backend to resize window
+      try {
+        await callAPI('resize_window', {
+          width: prefs.windowWidth,
+          height: prefs.windowHeight
+        })
+      } catch (error) {
+        console.error('[App] Failed to restore window size:', error)
+      }
+    }
+  } catch (error) {
+    console.error('[App] Failed to load preferences:', error)
+  }
+}
+
+// Save preferences to IndexedDB with debouncing
+let saveTimeout: number | null = null
+const savePreferences = () => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+  }
+
+  saveTimeout = window.setTimeout(async () => {
+    try {
+      await storage.set('showDAGOnly', showDAGOnly.value)
+      await storage.set('showHidden', showHidden.value)
+    } catch (error) {
+      console.error('[App] Failed to save preferences:', error)
+    }
+  }, 500) // Debounce 500ms
+}
+
+// Watch for preference changes and save them
+watch([showDAGOnly, showHidden], () => {
+  savePreferences()
+})
+
+// Save window size when it changes
+const saveWindowSize = async (width: number, height: number) => {
+  try {
+    await storage.set('windowWidth', width)
+    await storage.set('windowHeight', height)
+  } catch (error) {
+    console.error('[App] Failed to save window size:', error)
+  }
+}
+
 onMounted(async () => {
+  // Load saved preferences
+  await loadPreferences()
+
   // Wait for AuroraView API to be ready
   const waitForAPI = async (maxAttempts = 50, interval = 100) => {
     for (let i = 0; i < maxAttempts; i++) {
@@ -84,6 +147,16 @@ onMounted(async () => {
   onMayaEvent('selection_changed', (data: unknown) => {
     const node = EventDataAdapter.extractString(data, 'node', 'name')
     selectedNode.value = node
+  })
+
+  // Listen for window resize events from backend
+  onMayaEvent('window_resized', (data: any) => {
+    const width = data?.width
+    const height = data?.height
+
+    if (width && height) {
+      saveWindowSize(width, height)
+    }
   })
 
   // Keyboard shortcuts

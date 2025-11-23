@@ -136,6 +136,41 @@ class MayaOutlinerAPI:
         except Exception as e:
             return {"ok": False, "message": str(e)}
 
+    def resize_window(self, width: int, height: int) -> Dict[str, Any]:
+        """Resize the outliner window.
+
+        Args:
+            width: New window width in pixels
+            height: New window height in pixels
+
+        Returns:
+            Result dictionary with success status
+        """
+        try:
+            if self._outliner.dialog:
+                self._outliner.dialog.resize(width, height)
+            return {"ok": True, "message": f"Resized window to {width}x{height}"}
+        except Exception as e:
+            return {"ok": False, "message": str(e)}
+
+    def get_window_size(self) -> Dict[str, Any]:
+        """Get current window size.
+
+        Returns:
+            Dictionary with width and height
+        """
+        try:
+            if self._outliner.dialog:
+                size = self._outliner.dialog.size()
+                return {
+                    "ok": True,
+                    "width": size.width(),
+                    "height": size.height()
+                }
+            return {"ok": False, "message": "Dialog not available"}
+        except Exception as e:
+            return {"ok": False, "message": str(e)}
+
     def set_visibility(self, node_name: str, visible: bool = True) -> Dict[str, Any]:
         """Set node visibility in Maya.
 
@@ -940,8 +975,42 @@ class MayaOutliner:
 
         from qtpy.QtWidgets import QDialog, QVBoxLayout
 
+        # Custom QDialog to handle resize events
+        class OutlinerDialog(QDialog):
+            def __init__(self, parent, outliner_instance):
+                super().__init__(parent)
+                self.outliner_instance = outliner_instance
+                self._resize_timer = None
+
+            def resizeEvent(self, event):
+                super().resizeEvent(event)
+                # Debounce resize events to avoid spamming
+                if self._resize_timer:
+                    self._resize_timer.stop()
+
+                from qtpy.QtCore import QTimer
+                self._resize_timer = QTimer()
+                self._resize_timer.setSingleShot(True)
+                self._resize_timer.timeout.connect(lambda: self._on_resize_finished(event))
+                self._resize_timer.start(300)  # 300ms debounce
+
+            def _on_resize_finished(self, event):
+                # Notify frontend about size change
+                if self.outliner_instance and self.outliner_instance.auroraview:
+                    size = event.size()
+                    try:
+                        self.outliner_instance.auroraview.send_event(
+                            'window_resized',
+                            {
+                                'width': size.width(),
+                                'height': size.height()
+                            }
+                        )
+                    except Exception:
+                        pass
+
         # Create QDialog container (parent is Maya main window)
-        self.dialog = QDialog(maya_window)
+        self.dialog = OutlinerDialog(maya_window, self)
         self.dialog.setWindowTitle("Maya Outliner")
         self.dialog.resize(400, 800)
         self.dialog.setSizeGripEnabled(True)
