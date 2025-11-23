@@ -99,17 +99,7 @@ class MayaOutlinerAPI:
         Returns:
             List of root nodes with their children
         """
-        print("[MayaOutlinerAPI] get_scene_hierarchy called with params:", params)
-        hierarchy = self._outliner.get_scene_hierarchy()
-        print(f"[MayaOutlinerAPI] Returning {len(hierarchy)} root nodes")
-
-        # Debug: print first few nodes
-        if hierarchy:
-            print(f"[MayaOutlinerAPI] First node: {hierarchy[0].get('name', 'unknown')}")
-        else:
-            print("[MayaOutlinerAPI] WARNING: No nodes found in scene!")
-
-        return hierarchy
+        return self._outliner.get_scene_hierarchy()
 
     def select_node(self, node_name: str) -> Dict[str, Any]:
         """Select a node in Maya.
@@ -124,12 +114,10 @@ class MayaOutlinerAPI:
             Direct execution is safe here because QtWebView automatically
             handles event processing. No need for executeDeferred or scriptJobs.
         """
-        print(f"[MayaOutlinerAPI] select_node called: {node_name}")
         try:
             self._outliner.select_node(node_name)
             return {"ok": True, "message": f"Selected: {node_name}"}
         except Exception as e:
-            print(f"[MayaOutlinerAPI] Error selecting node: {e}")
             return {"ok": False, "message": str(e)}
 
     def select_multiple_nodes(self, node_names: List[str]) -> Dict[str, Any]:
@@ -141,13 +129,11 @@ class MayaOutlinerAPI:
         Returns:
             Result dictionary with success status
         """
-        print(f"[MayaOutlinerAPI] select_multiple_nodes called: {node_names}")
         try:
             if MAYA_AVAILABLE:
                 cmds.select(node_names, replace=True)
             return {"ok": True, "message": f"Selected {len(node_names)} nodes"}
         except Exception as e:
-            print(f"[MayaOutlinerAPI] Error selecting multiple nodes: {e}")
             return {"ok": False, "message": str(e)}
 
     def set_visibility(self, node_name: str, visible: bool = True) -> Dict[str, Any]:
@@ -556,10 +542,22 @@ class MayaOutliner:
         if not MAYA_AVAILABLE:
             return self._get_mock_hierarchy()
 
-        def build_node_tree(node: str, parent: Optional[str] = None) -> Dict[str, Any]:
+        def build_node_tree(node: str, parent: Optional[str] = None) -> Optional[Dict[str, Any]]:
             """Recursively build node tree"""
+            # Skip temporary nodes (names ending with #)
+            if '#' in node:
+                return None
+
+            # Verify node exists
+            if not cmds.objExists(node):
+                return None
+
             children_names = cmds.listRelatives(node, children=True, fullPath=False) or []
-            children = [build_node_tree(child, node) for child in children_names]
+            children = []
+            for child in children_names:
+                child_tree = build_node_tree(child, node)
+                if child_tree is not None:
+                    children.append(child_tree)
 
             # Get visibility
             visible = True
@@ -574,7 +572,7 @@ class MayaOutliner:
             return {
                 "name": node,
                 "type": self.get_node_type(node),
-                "path": cmds.ls(node, long=True)[0] if cmds.objExists(node) else node,
+                "path": cmds.ls(node, long=True)[0],
                 "parent": parent,
                 "children": children,
                 "visible": visible,
@@ -582,20 +580,21 @@ class MayaOutliner:
             }
 
         # Get all root nodes (nodes without parents)
-        # assemblies=True returns top-level transform nodes (excludes cameras, lights by default)
         all_nodes = cmds.ls(assemblies=True) or []
-
-        print(f"[MayaOutliner] Found {len(all_nodes)} root nodes: {all_nodes}")
 
         # If no assemblies, try getting all transform nodes
         if not all_nodes:
-            print("[MayaOutliner] No assemblies found, trying all transforms...")
             all_transforms = cmds.ls(type='transform') or []
-            # Filter to only root transforms (no parent)
             all_nodes = [t for t in all_transforms if not cmds.listRelatives(t, parent=True)]
-            print(f"[MayaOutliner] Found {len(all_nodes)} root transforms: {all_nodes}")
 
-        return [build_node_tree(node) for node in all_nodes]
+        # Build tree and filter out None values
+        result = []
+        for node in all_nodes:
+            tree = build_node_tree(node)
+            if tree is not None:
+                result.append(tree)
+
+        return result
 
     def _get_mock_hierarchy(self) -> List[Dict[str, Any]]:
         """Get mock hierarchy for testing without Maya"""
@@ -948,9 +947,10 @@ class MayaOutliner:
         self.dialog.setSizeGripEnabled(True)
         self.dialog.setStyleSheet("background-color: #2b2b2b;")
 
-        # Create layout with no margins for full WebView
+        # Create layout with minimal margins to match webview size
         layout = QVBoxLayout(self.dialog)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         # Create QtWebView as child widget (parent is dialog)
         # Event processing is automatic with QtWebView!
