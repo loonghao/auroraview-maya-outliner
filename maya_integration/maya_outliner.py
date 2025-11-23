@@ -1012,7 +1012,6 @@ class MayaOutliner:
         # Create QDialog container (parent is Maya main window)
         self.dialog = OutlinerDialog(maya_window, self)
         self.dialog.setWindowTitle("Maya Outliner")
-        self.dialog.resize(400, 800)
         self.dialog.setSizeGripEnabled(True)
         self.dialog.setStyleSheet("background-color: #2b2b2b;")
 
@@ -1029,7 +1028,27 @@ class MayaOutliner:
             dev_tools=True,
             context_menu=self._context_menu,  # Disable native context menu for custom menus
         )
+
+        # Set initial webview size (this is the content area size we want)
+        desired_content_width = 400
+        desired_content_height = 800
+        self.webview.setMinimumSize(desired_content_width, desired_content_height)
+        self.webview.resize(desired_content_width, desired_content_height)
+
         layout.addWidget(self.webview)
+
+        # Adjust dialog size to fit webview + window decorations
+        # Get the frame size (title bar + borders)
+        self.dialog.adjustSize()
+
+        # Calculate the extra space needed for window decorations
+        frame_width = self.dialog.frameGeometry().width() - self.dialog.geometry().width()
+        frame_height = self.dialog.frameGeometry().height() - self.dialog.geometry().height()
+
+        # Set dialog size to accommodate webview + decorations
+        total_width = desired_content_width + frame_width
+        total_height = desired_content_height + frame_height
+        self.dialog.resize(total_width, total_height)
 
         # Create API object
         self.api = MayaOutlinerAPI(self)
