@@ -48,13 +48,13 @@ def setup_auroraview_outliner():
         print(f"[AuroraView]   Check that LOCAL_AURORAVIEW_PATH is correct: {LOCAL_AURORAVIEW_PATH}")
         return
 
-    # Verify maya_integration is available
+    # Verify auroraview_maya_outliner is available
     try:
-        from maya_integration import maya_outliner
+        from auroraview_maya_outliner import maya_outliner
         print(f"[AuroraView] ✓ Maya integration loaded")
         print(f"[AuroraView]   Location: {maya_outliner.__file__}")
     except ImportError as e:
-        print(f"[AuroraView] ✗ Failed to import maya_integration: {e}")
+        print(f"[AuroraView] ✗ Failed to import auroraview_maya_outliner: {e}")
         print(f"[AuroraView]   Check that PROJECT_ROOT is correct: {PROJECT_ROOT}")
         return
 
@@ -102,7 +102,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Launch outliner
-from maya_integration import maya_outliner
+from auroraview_maya_outliner import maya_outliner
 maya_outliner.main()
 """,
                 sourceType="python",

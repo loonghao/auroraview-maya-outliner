@@ -27,3 +27,4 @@ dist-ssr
 userSetup.local.py
 *.local.py
 __pycache__/
+.build/

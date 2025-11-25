@@ -1,11 +1,13 @@
 # Maya Outliner - AuroraView 示例
 
+[![Release](https://img.shields.io/github/v/release/loonghao/auroraview-maya-outliner?logo=github)](https://github.com/loonghao/auroraview-maya-outliner/releases)
+[![Downloads](https://img.shields.io/github/downloads/loonghao/auroraview-maya-outliner/total?logo=github)](https://github.com/loonghao/auroraview-maya-outliner/releases)
 [![Vue 3](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![AuroraView](https://img.shields.io/badge/AuroraView-Rust-orange?logo=rust&logoColor=white)](../../README_zh.md)
 
-[English Documentation](./README.md) | [快速开始](./QUICKSTART.md) | [本地开发](./LOCAL_DEVELOPMENT.md)
+[English Documentation](./README.md) | [📦 安装指南](./INSTALLATION.md) | [快速开始](./QUICKSTART.md) | [部署指南](./DEPLOYMENT.md) | [本地开发](./LOCAL_DEVELOPMENT.md)
 
 使用 **AuroraView**、**Vue 3** 和 **TypeScript** 构建的现代化、基于 Web 的 Maya 大纲视图。此示例演示了如何使用直接嵌入 Maya 的现代 Web 技术创建高性能 DCC 工具。
 
@@ -47,13 +49,33 @@
 
 ## 📦 安装
 
-### 前置要求
+### 快速安装(普通用户)
+
+**下载最新版本并运行安装程序:**
+
+1. 访问 [Releases](https://github.com/loonghao/auroraview-maya-outliner/releases)
+2. 下载 `maya-outliner-{version}.zip`
+3. 解压并运行 `install.bat` (Windows) 或 `install.sh` (Linux/macOS)
+4. 重启 Maya
+5. 在 Maya 脚本编辑器中运行:
+   ```python
+   from auroraview_maya_outliner import main
+   main()
+   ```
+
+📖 **[完整安装指南](./INSTALLATION.md)** - 所有平台的详细安装说明
+
+### 开发者安装
+
+对于想要贡献或自定义的开发者:
+
+#### 前置要求
 
 - **Maya 2020+** (Python 3.7+)
 - **Node.js 18+** 和 npm
 - 在 Maya 的 Python 环境中安装 **AuroraView**
 
-### 安装 AuroraView
+#### 安装 AuroraView
 
 ```bash
 # 在 Maya 的 Python 中使用 pip
@@ -142,7 +164,7 @@ npm run dev
 打开 Maya 的脚本编辑器并运行:
 
 ```python
-from maya_integration import maya_outliner
+from auroraview_maya_outliner import maya_outliner
 
 # 使用开发服务器（默认）
 outliner = maya_outliner.main()
@@ -164,7 +186,7 @@ npm run build
 2. **在 Maya 中使用本地构建:**
 
 ```python
-from maya_integration import maya_outliner
+from auroraview_maya_outliner import maya_outliner
 
 # 使用本地构建文件（不需要开发服务器）
 outliner = maya_outliner.main(use_local=True)
@@ -245,7 +267,7 @@ maya-outliner/
 │   ├── App.vue                  # 根组件
 │   ├── main.ts                  # 入口点
 │   └── style.css                # 全局样式
-├── maya_integration/
+├── auroraview_maya_outliner/
 │   ├── maya_outliner.py         # Maya 后端 (AuroraView + QtWebView)
 │   └── __init__.py
 ├── test_api_update.py           # AuroraView API 回归检查

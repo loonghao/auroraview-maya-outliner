@@ -59,3 +59,38 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+/* Force zero margins for full WebView coverage - eliminate white edges */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* Eliminate any white edges */
+  border: none !important;
+  outline: none !important;
+  box-sizing: border-box;
+  /* Force dark background to prevent white flash */
+  background: #020617 !important;
+  /* Anti-aliasing for better rendering quality */
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* GPU acceleration */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  box-sizing: border-box;
+  background: #020617 !important;
+}

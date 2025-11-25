@@ -56,10 +56,14 @@ except ImportError:
 # Import AuroraView components (following official pattern)
 try:
     from auroraview import AuroraView, QtWebView
+    from auroraview.event_timer import EventTimer
 except ImportError as e:
     print(f"[MayaOutliner] Failed to import auroraview: {e}")
     print("[MayaOutliner] Make sure auroraview is installed and PYTHONPATH is set correctly")
     raise
+
+# Import environment configuration
+from .config import get_environment_info, get_frontend_url
 
 # Import Maya Qt components for window handle
 omui = None
@@ -69,7 +73,7 @@ QDialog = None
 QVBoxLayout = None
 try:
     import maya.OpenMayaUI as omui
-    from PySide2.QtWidgets import QDialog, QVBoxLayout, QWidget
+    from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
     from shiboken2 import wrapInstance
 except ImportError as e:
     pass  # Will use standalone mode
@@ -474,6 +478,7 @@ class MayaOutliner:
         self._singleton_key = singleton_key
         self._context_menu = context_menu
         self._is_closing = False  # Prevent re-entrant close calls
+        self._event_timer: Optional[EventTimer] = None  # EventTimer for continuous updates
 
     def get_node_type(self, node: str) -> str:
         """Get the type of a Maya node"""
@@ -857,6 +862,38 @@ class MayaOutliner:
 
         self.callback_ids.clear()
 
+    def _setup_event_timer(self):
+        """Setup EventTimer for continuous WebView updates.
+
+        This ensures the WebView stays responsive during window dragging/resizing
+        when Qt's event loop might be blocked.
+
+        The EventTimer will:
+        - Process WebView events at 60 FPS (16ms interval)
+        - Keep WebView rendering smooth during window operations
+        - Automatically use Qt QTimer backend in Maya
+        """
+        if not self.webview:
+            return
+
+        try:
+            # Get the underlying WebView instance from QtWebView
+            webview_core = getattr(self.webview, '_webview', None)
+            if not webview_core:
+                print("[MayaOutliner] Warning: Could not access WebView core for EventTimer")
+                return
+
+            # Create EventTimer with 16ms interval (60 FPS)
+            self._event_timer = EventTimer(webview_core, interval_ms=16)
+
+            # Start the timer (will auto-select Qt QTimer backend in Maya)
+            self._event_timer.start()
+            print("[MayaOutliner] EventTimer started for smooth window dragging")
+
+        except Exception as e:
+            print(f"[MayaOutliner] Warning: Could not setup EventTimer: {e}")
+            # Not critical - WebView will still work, just might be less responsive during dragging
+
     @classmethod
     def _get_or_create_singleton(cls, singleton_key: str, factory_fn) -> "MayaOutliner":
         """Get existing singleton instance or create new one
@@ -916,8 +953,15 @@ class MayaOutliner:
         """Run the Maya Outliner WebView
 
         Args:
-            url: URL to load. If None, auto-detect based on use_local flag
-            use_local: If True, use local built files. If False, use dev server (default: False)
+            url: URL to load. If None, auto-detect based on environment configuration
+            use_local: DEPRECATED. Use AURORAVIEW_ENV environment variable instead.
+                      If True, force production mode (static files)
+                      If False, use environment variable or default to development
+
+        Environment Variables:
+            AURORAVIEW_ENV: Controls the environment mode
+                - "development" or "dev": Use Vite dev server (default)
+                - "production" or "prod": Use static built files from dist/
 
         Architecture:
             This method uses AuroraView's layered architecture with automatic event processing:
@@ -941,21 +985,37 @@ class MayaOutliner:
 
             All JavaScript ↔ Python communication works automatically!
             Just call emit() and the layered architecture handles the rest.
+
+        Examples:
+            # Auto-detect based on AURORAVIEW_ENV environment variable
+            outliner.run()
+
+            # Force production mode (static files)
+            outliner.run(use_local=True)
+
+            # Force development mode (dev server)
+            import os
+            os.environ['AURORAVIEW_ENV'] = 'development'
+            outliner.run()
+
+            # Use custom URL
+            outliner.run(url="http://localhost:8080")
         """
         # Auto-detect URL if not provided
         if url is None:
-            if use_local:
-                # Use local built files
-                import os
+            try:
+                # Use environment-based configuration
+                url = get_frontend_url(force_production=use_local)
+                print(f"[MayaOutliner] Using URL: {url}")
 
-                dist_dir = os.path.join(os.path.dirname(__file__), "..", "dist")
-                index_html = os.path.join(dist_dir, "index.html")
-                if os.path.exists(index_html):
-                    url = f"file:///{os.path.abspath(index_html).replace(os.sep, '/')}"
-                else:
-                    url = "http://localhost:5173"
-            else:
-                # Use dev server
+                # Print environment info for debugging
+                env_info = get_environment_info()
+                print(f"[MayaOutliner] Environment: {env_info['env_value']}")
+                print(f"[MayaOutliner] Mode: {'Production' if env_info['is_production'] else 'Development'}")
+            except FileNotFoundError as e:
+                # Fallback to dev server if production files not found
+                print(f"[MayaOutliner] Warning: {e}")
+                print("[MayaOutliner] Falling back to development server")
                 url = "http://localhost:5173"
 
         # Get Maya main window as QWidget (for Qt backend)
@@ -975,44 +1035,11 @@ class MayaOutliner:
 
         from qtpy.QtWidgets import QDialog, QVBoxLayout
 
-        # Custom QDialog to handle resize events
+        # Custom QDialog (no need to handle resize events - QtWebView handles it)
         class OutlinerDialog(QDialog):
             def __init__(self, parent, outliner_instance):
                 super().__init__(parent)
                 self.outliner_instance = outliner_instance
-                self._resize_timer = None
-                self._pending_size = None
-
-            def resizeEvent(self, event):
-                super().resizeEvent(event)
-
-                # Extract size immediately before event is deleted
-                size = event.size()
-                self._pending_size = (size.width(), size.height())
-
-                # Debounce resize events to avoid spamming
-                if self._resize_timer:
-                    self._resize_timer.stop()
-
-                from qtpy.QtCore import QTimer
-                self._resize_timer = QTimer()
-                self._resize_timer.setSingleShot(True)
-                self._resize_timer.timeout.connect(self._on_resize_finished)
-                self._resize_timer.start(300)  # 300ms debounce
-
-            def _on_resize_finished(self):
-                # Notify frontend about size change
-                if self.outliner_instance and self.outliner_instance.auroraview and self._pending_size:
-                    try:
-                        self.outliner_instance.auroraview.send_event(
-                            'window_resized',
-                            {
-                                'width': self._pending_size[0],
-                                'height': self._pending_size[1]
-                            }
-                        )
-                    except Exception:
-                        pass
 
         # Create QDialog container (parent is Maya main window)
         self.dialog = OutlinerDialog(maya_window, self)
@@ -1076,6 +1103,10 @@ class MayaOutliner:
         # Setup Maya callbacks
         self.setup_maya_callbacks()
 
+        # Setup EventTimer for continuous updates during window dragging
+        # This ensures WebView stays responsive even when Qt event loop is blocked
+        self._setup_event_timer()
+
         # Show QDialog (simplified - Qt backend only)
         self.dialog.show()
 
@@ -1091,6 +1122,16 @@ class MayaOutliner:
         self._is_closing = True
 
         try:
+            # Stop EventTimer
+            if self._event_timer is not None:
+                try:
+                    self._event_timer.stop()
+                    print("[MayaOutliner] EventTimer stopped")
+                except Exception as e:
+                    print(f"[MayaOutliner] Warning: Error stopping EventTimer: {e}")
+                finally:
+                    self._event_timer = None
+
             # Remove Maya callbacks
             self.cleanup_callbacks()
 

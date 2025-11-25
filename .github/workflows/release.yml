@@ -1,0 +1,112 @@
+name: Release Maya Outliner Package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get tag version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install nox
+
+      - name: Create Maya plugin package
+        id: create_package
+        run: |
+          nox -s make-maya-package -- --version ${{ steps.get_version.outputs.VERSION }}
+
+      - name: Generate changelog
+        id: changelog
+        uses: jaywcjlove/changelog-generator@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filter-author: (|dependabot|renovate\\[bot\\]|dependabot\\[bot\\]|Renovate Bot)
+          filter: '[R|r]elease[d]\s+[v|V]\d(\.\d+){0,2}'
+          template: |
+            ## 🐛 Bug Fixes
+            {{fix}}
+            
+            ## ✨ New Features
+            {{feat}}
+            
+            ## 🔧 Improvements
+            {{refactor,perf,clean}}
+            
+            ## 📝 Documentation
+            {{docs}}
+            
+            ## 🎨 Styling
+            {{style}}
+            
+            ## 🔨 Miscellaneous
+            {{chore,ci||🔶 Nothing changed}}
+            
+            ## ❓ Unknown
+            {{__unknown__}}
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/maya-outliner-*.zip"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: "Maya Outliner v${{ steps.get_version.outputs.VERSION }}"
+          body: |
+            # AuroraView Maya Outliner v${{ steps.get_version.outputs.VERSION }}
+            
+            ## 📦 Installation
+            
+            1. Download `maya-outliner-${{ steps.get_version.outputs.VERSION }}.zip`
+            2. Extract the zip file
+            3. Run `install.bat` (Windows) or `install.sh` (Linux/macOS)
+            4. Restart Maya
+            5. In Maya Script Editor, run:
+               ```python
+               from auroraview_maya_outliner import main
+               main()
+               ```
+            
+            ## 📋 Changes
+            
+            Comparing Changes: ${{ steps.changelog.outputs.compareurl }}
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## 📚 Documentation
+            
+            - [Quick Start Guide](https://github.com/${{ github.repository }}/blob/main/QUICKSTART.md)
+            - [Deployment Guide](https://github.com/${{ github.repository }}/blob/main/DEPLOYMENT.md)
+            - [Local Development](https://github.com/${{ github.repository }}/blob/main/LOCAL_DEVELOPMENT.md)
+
