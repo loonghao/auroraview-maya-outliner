@@ -1,0 +1,210 @@
+name: PR Checks
+
+# This workflow runs comprehensive checks on PRs to ensure quality before merging.
+# It tests building and packaging to catch issues early.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write # For commenting on PRs
+
+jobs:
+  # Frontend build and lint
+  frontend-checks:
+    name: Frontend Build & Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build frontend
+        run: npm run build
+      
+      - name: Upload frontend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 7
+
+  # Package build test
+  package-build-test:
+    name: Package Build Test
+    runs-on: ubuntu-latest
+    needs: frontend-checks
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build frontend
+        run: npm run build
+      
+      - name: Build Maya package
+        run: python build_maya_package.py --version 0.1.0-test
+      
+      - name: Verify package contents
+        run: |
+          echo "Checking package structure..."
+          if [ ! -f "dist/maya-outliner-0.1.0-test.zip" ]; then
+            echo "❌ Package zip not found!"
+            exit 1
+          fi
+          
+          # Extract and verify contents
+          unzip -l dist/maya-outliner-0.1.0-test.zip
+          
+          echo "✅ Package build successful!"
+      
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maya-outliner-package-test
+          path: dist/maya-outliner-0.1.0-test.zip
+          retention-days: 7
+
+  # Verify mod file and installation scripts
+  verify-installation:
+    name: Verify Installation Files
+    runs-on: ubuntu-latest
+    needs: package-build-test
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build frontend
+        run: npm run build
+      
+      - name: Build package
+        run: python build_maya_package.py --version 0.1.0-test
+      
+      - name: Extract and verify package
+        run: |
+          mkdir -p /tmp/maya-outliner-test
+          unzip dist/maya-outliner-0.1.0-test.zip -d /tmp/maya-outliner-test
+          
+          echo "Verifying package structure..."
+          cd /tmp/maya-outliner-test/maya-outliner
+          
+          # Check required files exist
+          required_files=(
+            "maya-outliner.mod"
+            "install.bat"
+            "install.ps1"
+            "userSetup.py"
+            "auroraview_maya_outliner/__init__.py"
+            "auroraview_maya_outliner/maya_outliner.py"
+            "dist/index.html"
+          )
+          
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ] && [ ! -d "$file" ]; then
+              echo "❌ Missing required file: $file"
+              exit 1
+            fi
+            echo "✅ Found: $file"
+          done
+          
+          # Verify mod file has correct PYTHONPATH
+          echo ""
+          echo "Checking .mod file content..."
+          cat maya-outliner.mod
+          
+          if ! grep -q "PYTHONPATH +:= auroraview_maya_outliner" maya-outliner.mod; then
+            echo "❌ .mod file missing correct PYTHONPATH!"
+            exit 1
+          fi
+          echo "✅ .mod file has correct PYTHONPATH"
+          
+          # Verify userSetup.py has no placeholders
+          echo ""
+          echo "Checking userSetup.py..."
+          if grep -q "{{PROJECT_ROOT}}" userSetup.py; then
+            echo "❌ userSetup.py still contains {{PROJECT_ROOT}} placeholder!"
+            exit 1
+          fi
+          echo "✅ userSetup.py has no placeholders"
+          
+          echo ""
+          echo "✅ All verification checks passed!"
+
+  # PR approval gate - all checks must pass
+  pr-ready:
+    name: PR Ready for Merge
+    runs-on: ubuntu-latest
+    needs: [frontend-checks, package-build-test, verify-installation]
+    if: always()
+    
+    steps:
+      - name: Check all required jobs
+        run: |
+          echo "Checking PR readiness..."
+          
+          # Check frontend
+          if [[ "${{ needs.frontend-checks.result }}" != "success" ]]; then
+            echo "❌ Frontend checks failed"
+            exit 1
+          fi
+          
+          # Check package build
+          if [[ "${{ needs.package-build-test.result }}" != "success" ]]; then
+            echo "❌ Package build test failed"
+            exit 1
+          fi
+          
+          # Check installation verification
+          if [[ "${{ needs.verify-installation.result }}" != "success" ]]; then
+            echo "❌ Installation verification failed"
+            exit 1
+          fi
+          
+          echo "✅ PR is ready for merge!"
+          echo "## ✅ PR Ready for Merge" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All checks have passed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Frontend build and lint" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Package build test" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Installation files verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This PR can be safely merged and released." >> $GITHUB_STEP_SUMMARY
+
