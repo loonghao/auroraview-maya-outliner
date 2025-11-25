@@ -4,6 +4,7 @@ import OutlinerTree from './components/OutlinerTree.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import { useMayaIPC } from './composables/useMayaIPC'
 import { useContextMenu } from './composables/useContextMenu'
+import { useResponsiveScale } from './composables/useResponsiveScale'
 import { getMayaContextMenuItems } from './config/mayaContextMenu'
 import { EventDataAdapter } from './utils/eventAdapter'
 import { storage } from './utils/storage'
@@ -15,6 +16,17 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 const { getSceneHierarchy, selectNode, setVisibility, onMayaEvent, callAPI } = useMayaIPC()
 const contextMenu = useContextMenu()
+
+// Responsive scaling with intelligent auto-zoom
+const { scaleStyle, updateDimensions } = useResponsiveScale({
+  baseWidth: 800,   // Design base width
+  baseHeight: 600,  // Design base height
+  minScale: 0.5,    // Minimum 50% zoom
+  maxScale: 1.5,    // Maximum 150% zoom
+  smoothTransition: true,
+  throttleDelay: 16 // ~60fps for balanced performance (avoid UI blocking)
+})
+
 const sceneData = ref<MayaNode[]>([])
 const selectedNode = ref<string | null>(null)
 const selectedNodes = ref<Set<string>>(new Set()) // Multi-selection support
@@ -91,14 +103,24 @@ watch([showDAGOnly, showHidden], () => {
   savePreferences()
 })
 
-// Save window size when it changes
+// Save window size when it changes (debounced to avoid excessive IndexedDB writes)
+let saveWindowSizeTimeout: number | null = null
 const saveWindowSize = async (width: number, height: number) => {
-  try {
-    await storage.set('windowWidth', width)
-    await storage.set('windowHeight', height)
-  } catch (error) {
-    console.error('[App] Failed to save window size:', error)
+  // Clear previous timeout
+  if (saveWindowSizeTimeout) {
+    clearTimeout(saveWindowSizeTimeout)
   }
+
+  // Debounce IndexedDB writes (500ms after last resize)
+  saveWindowSizeTimeout = window.setTimeout(async () => {
+    try {
+      await storage.set('windowWidth', width)
+      await storage.set('windowHeight', height)
+      console.log('[App] Window size saved to IndexedDB:', { width, height })
+    } catch (error) {
+      console.error('[App] Failed to save window size:', error)
+    }
+  }, 500)
 }
 
 onMounted(async () => {
@@ -150,13 +172,36 @@ onMounted(async () => {
   })
 
   // Listen for window resize events from backend
+  let lastResizeEventTime = 0
+  let resizeEventCount = 0
+
   onMayaEvent('window_resized', (data: any) => {
+    const now = performance.now()
+    const timeSinceLastEvent = now - lastResizeEventTime
+    resizeEventCount++
+
+    console.log(`[App.vue] window_resized #${resizeEventCount} (Δ${timeSinceLastEvent.toFixed(1)}ms):`, data)
+
     const width = data?.width
     const height = data?.height
 
     if (width && height) {
+      const updateStart = performance.now()
+
+      // Update responsive scale dimensions immediately for smooth animation
+      // In embedded webview, window.innerWidth/innerHeight may not update correctly
+      updateDimensions(width, height)
+
+      const updateTime = performance.now() - updateStart
+      console.log(`[App.vue] updateDimensions completed in ${updateTime.toFixed(2)}ms`)
+
+      // Save window size to IndexedDB (debounced to avoid excessive writes)
       saveWindowSize(width, height)
+    } else {
+      console.warn('[App.vue] Invalid dimensions received:', { width, height })
     }
+
+    lastResizeEventTime = now
   })
 
   // Keyboard shortcuts
@@ -374,8 +419,19 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
 </script>
 
 <template>
-  <div class="app-container">
-    <header class="app-header">
+  <div class="app-wrapper">
+    <!-- Edge buffer zones to prevent WebView from capturing resize events -->
+    <div class="edge-buffer edge-buffer-top"></div>
+    <div class="edge-buffer edge-buffer-right"></div>
+    <div class="edge-buffer edge-buffer-bottom"></div>
+    <div class="edge-buffer edge-buffer-left"></div>
+    <div class="edge-buffer edge-buffer-top-left"></div>
+    <div class="edge-buffer edge-buffer-top-right"></div>
+    <div class="edge-buffer edge-buffer-bottom-left"></div>
+    <div class="edge-buffer edge-buffer-bottom-right"></div>
+
+    <div class="app-container" :style="scaleStyle">
+      <header class="app-header">
       <div class="app-header-inner">
         <div class="app-title-block">
           <h1 class="app-title">Maya Outliner</h1>
@@ -459,28 +515,129 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
       :items="contextMenu.items.value"
       @close="contextMenu.hide"
     />
+    </div>
   </div>
 </template>
 
 <style scoped>
+/* Wrapper for scaling - fills entire viewport */
+.app-wrapper {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  background: #020617;
+  /* Eliminate white edges */
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  /* Force full coverage */
+  box-sizing: border-box;
+  /* Add subtle border to indicate resize area */
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.1);
+}
+
+/* Edge buffer zones - transparent overlays that block WebView mouse events */
+/* This allows Qt to handle window resize operations at the edges */
+.edge-buffer {
+  position: fixed;
+  pointer-events: auto; /* Capture mouse events */
+  z-index: 9999; /* Above all content */
+  background: transparent; /* Invisible but interactive */
+
+  /* Debug mode: uncomment to visualize buffer zones */
+  /* background: rgba(255, 0, 0, 0.1); */
+  /* border: 1px solid rgba(255, 0, 0, 0.3); */
+}
+
+/* Top edge */
+.edge-buffer-top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+/* Right edge */
+.edge-buffer-right {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+}
+
+/* Bottom edge */
+.edge-buffer-bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+/* Left edge */
+.edge-buffer-left {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 12px;
+}
+
+/* Corner buffers - larger hit areas for easier corner resizing */
+.edge-buffer-top-left {
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.edge-buffer-top-right {
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.edge-buffer-bottom-left {
+  bottom: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.edge-buffer-bottom-right {
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+}
+
+/* Container that gets scaled */
 .app-container {
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: clamp(0.75rem, 0.5rem + 1vw, 1.5rem);
-  background: radial-gradient(circle at top, #020617, #020617 40%, #020617 100%);
+  padding: 0;
+  background: #020617; /* Solid background to prevent white flash */
   color: #e5e7eb;
+  /* GPU acceleration hints */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .app-header {
-  border-radius: clamp(0.75rem, 0.6rem + 0.4vw, 1.1rem);
+  border-radius: 0;
   padding: clamp(0.7rem, 0.55rem + 0.4vw, 1rem)
     clamp(1rem, 0.8rem + 1.2vw, 1.8rem);
   background: rgba(15, 23, 42, 0.98);
-  border: 1px solid rgba(148, 163, 184, 0.55);
+  border: none;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.55);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.85);
-  margin-bottom: clamp(0.75rem, 0.5rem + 0.8vw, 1.3rem);
+  margin: 0;
 }
 
 .app-header-inner {
@@ -572,11 +729,13 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
 }
 
 .search-bar {
-  margin-top: clamp(0.5rem, 0.35rem + 0.6vw, 1rem);
-  margin-bottom: clamp(0.5rem, 0.35rem + 0.6vw, 1rem);
+  margin: 0;
+  padding: clamp(0.5rem, 0.35rem + 0.6vw, 1rem) clamp(1rem, 0.8rem + 1.2vw, 1.8rem);
   display: flex;
   flex-direction: column;
   gap: clamp(0.5rem, 0.4rem + 0.3vw, 0.8rem);
+  background: rgba(15, 23, 42, 0.5);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 .search-input {
@@ -631,28 +790,49 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
 
 .app-main {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  padding: clamp(0.6rem, 0.45rem + 0.5vw, 1rem) 0;
+  margin: 0;
+  padding: clamp(0.6rem, 0.45rem + 0.5vw, 1rem) clamp(1rem, 0.8rem + 1.2vw, 1.8rem);
+  min-height: 0; /* Critical for flex children to shrink */
 }
 
 .app-card {
-  height: 100%;
-  border-radius: clamp(0.75rem, 0.6rem + 0.4vw, 1.1rem);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
   background: rgba(15, 23, 42, 0.98);
-  border: 1px solid rgba(30, 64, 175, 0.65);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
-  padding: clamp(0.4rem, 0.35rem + 0.4vw, 0.9rem)
-    clamp(0.4rem, 0.35rem + 0.8vw, 1.2rem);
+  border: none;
+  box-shadow: none;
+  padding: 0;
   overflow: hidden;
+  min-height: 0; /* Critical for flex children to shrink */
+}
+
+.app-card-content {
+  padding: 0 !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* Critical for flex children to shrink */
+}
+
+.tree-scroll-area {
+  flex: 1;
+  min-height: 0; /* Critical for flex children to shrink */
 }
 
 .app-footer {
-  margin-top: clamp(0.6rem, 0.45rem + 0.5vw, 1rem);
+  margin: 0;
   padding: clamp(0.55rem, 0.45rem + 0.3vw, 0.85rem)
     clamp(0.8rem, 0.65rem + 0.7vw, 1.6rem);
-  border-radius: clamp(0.6rem, 0.5rem + 0.35vw, 1rem);
-  background: radial-gradient(circle at top left, #020617, #020617);
-  border: 1px solid rgba(30, 64, 175, 0.6);
+  border-radius: 0;
+  background: rgba(15, 23, 42, 0.98);
+  border: none;
+  border-top: 1px solid rgba(30, 64, 175, 0.6);
   font-size: clamp(0.7rem, 0.65rem + 0.15vw, 0.85rem);
   color: #94a3b8;
   display: flex;

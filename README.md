@@ -1,11 +1,13 @@
 # Maya Outliner - AuroraView Example
 
+[![Release](https://img.shields.io/github/v/release/loonghao/auroraview-maya-outliner?logo=github)](https://github.com/loonghao/auroraview-maya-outliner/releases)
+[![Downloads](https://img.shields.io/github/downloads/loonghao/auroraview-maya-outliner/total?logo=github)](https://github.com/loonghao/auroraview-maya-outliner/releases)
 [![Vue 3](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![AuroraView](https://img.shields.io/badge/AuroraView-Rust-orange?logo=rust&logoColor=white)](../../README.md)
 
-[中文文档](./README_zh.md) | [Quick Start](./QUICKSTART.md) | [Local Development](./LOCAL_DEVELOPMENT.md)
+[中文文档](./README_zh.md) | [📦 Installation](./INSTALLATION.md) | [Quick Start](./QUICKSTART.md) | [Deployment Guide](./DEPLOYMENT.md) | [Local Development](./LOCAL_DEVELOPMENT.md)
 
 A modern, web-based Maya Outliner built with **AuroraView**, **Vue 3**, and **TypeScript**. This example demonstrates how to create high-performance DCC tools with modern web technologies embedded directly in Maya.
 
@@ -47,13 +49,33 @@ A modern, web-based Maya Outliner built with **AuroraView**, **Vue 3**, and **Ty
 
 ## 📦 Installation
 
-### Prerequisites
+### Quick Install (For End Users)
+
+**Download the latest release and run the installer:**
+
+1. Go to [Releases](https://github.com/loonghao/auroraview-maya-outliner/releases)
+2. Download `maya-outliner-{version}.zip`
+3. Extract and run `install.bat` (Windows) or `install.sh` (Linux/macOS)
+4. Restart Maya
+5. Run in Maya Script Editor:
+   ```python
+   from maya_integration import main
+   main()
+   ```
+
+📖 **[Full Installation Guide](./INSTALLATION.md)** - Detailed installation instructions for all platforms
+
+### Development Installation
+
+For developers who want to contribute or customize:
+
+#### Prerequisites
 
 - **Maya 2020+** (with Python 3.7+)
 - **Node.js 18+** and npm
 - **AuroraView** installed in Maya's Python environment
 
-### Install AuroraView
+#### Install AuroraView
 
 **Option A: Qt Backend (Recommended)**
 ```bash

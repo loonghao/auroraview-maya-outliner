@@ -142,11 +142,22 @@ const handleNodeParent = (childName: string, parentName: string | null) => {
 .outliner-tree {
   width: 100%;
   height: 100%;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* Critical for flex children to shrink */
 }
 
 .tree-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: clamp(0.25rem, 0.2rem + 0.3vw, 0.75rem) 0;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* GPU acceleration for scrolling */
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
 }
 
 .empty-state {

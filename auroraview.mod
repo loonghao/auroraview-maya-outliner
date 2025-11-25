@@ -1,8 +1,8 @@
-+ MAYAVERSION:2022 auroraview 0.1.0 ./auroraview
-PYTHONPATH +:= python
-PYTHONPATH +:= examples/maya-outliner
++ MAYAVERSION:2022 auroraview-maya-outliner 0.1.0 ./
+PYTHONPATH +:= .
 
-+ MAYAVERSION:2024 auroraview 0.1.0 ./auroraview
-PYTHONPATH +:= python
-PYTHONPATH +:= examples/maya-outliner
++ MAYAVERSION:2024 auroraview-maya-outliner 0.1.0 ./
+PYTHONPATH +:= .
 
++ MAYAVERSION:2025 auroraview-maya-outliner 0.1.0 ./
+PYTHONPATH +:= .
