@@ -6,13 +6,16 @@ It supports both development (Vite dev server) and production (static files) mod
 
 Environment Variables:
     AURORAVIEW_ENV: Controls the environment mode
-        - "development" or "dev": Use Vite dev server (default)
+        - "development" or "dev": Use Vite dev server
         - "production" or "prod": Use static built files from dist/
+        - Not set: Auto-detect based on dist/ existence
+            - If dist/index.html exists -> production mode
+            - Otherwise -> development mode
 
 Usage:
-    from maya_integration.config import get_frontend_url
+    from auroraview_maya_outliner.config import get_frontend_url
 
-    # Auto-detect based on environment variable
+    # Auto-detect based on environment variable or dist existence
     url = get_frontend_url()
 
     # Or explicitly specify
@@ -49,21 +52,30 @@ class EnvironmentConfig:
         """Check if running in production mode
 
         Returns:
-            True if AURORAVIEW_ENV is set to production/prod
+            True if AURORAVIEW_ENV is set to production/prod,
+            or if not set and dist files exist (auto-detection)
         """
         env = os.getenv(self.ENV_VAR, "").lower()
-        return env in self.PRODUCTION_VALUES
+        if env:
+            # Explicit environment variable set
+            return env in self.PRODUCTION_VALUES
+        # Auto-detect: use production if dist exists
+        return self.dist_exists
 
     @property
     def is_development(self) -> bool:
         """Check if running in development mode
 
         Returns:
-            True if AURORAVIEW_ENV is not set or set to development/dev
+            True if AURORAVIEW_ENV is set to development/dev,
+            or if not set and dist files don't exist (auto-detection)
         """
         env = os.getenv(self.ENV_VAR, "").lower()
-        # Default to development if not set or explicitly set to dev
-        return not env or env in self.DEVELOPMENT_VALUES
+        if env:
+            # Explicit environment variable set
+            return env in self.DEVELOPMENT_VALUES
+        # Auto-detect: use development if dist doesn't exist
+        return not self.dist_exists
 
     @property
     def dist_exists(self) -> bool:
