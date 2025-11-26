@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.1...maya-outliner-v0.1.2) (2025-11-26)
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-vue-next to ^0.554.0 ([7103373](https://github.com/loonghao/auroraview-maya-outliner/commit/7103373b05762f872aae3166ee2a55e26eaf7ac9))
+
 ## [0.1.1](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.0...maya-outliner-v0.1.1) (2025-11-26)
 
 
