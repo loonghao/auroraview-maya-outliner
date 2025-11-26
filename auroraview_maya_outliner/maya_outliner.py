@@ -63,20 +63,59 @@ except ImportError as e:
     raise
 
 # Import environment configuration
-from .config import get_environment_info, get_frontend_url
+from .config import (
+    get_environment_info,
+    get_frontend_url,
+    get_index_html_path,
+    is_production,
+)
 
-# Import Maya Qt components for window handle
-omui = None
-wrapInstance = None
-QWidget = None
-QDialog = None
-QVBoxLayout = None
+# Maya Qt window helper
+def _get_maya_main_window():
+    """Get Maya main window as QWidget without requiring shiboken directly.
+
+    Uses multiple fallback methods:
+    1. shiboken6 (Maya 2024+)
+    2. shiboken2 (Maya 2022/2023)
+    3. QApplication.activeWindow() fallback
+    """
+    from qtpy.QtWidgets import QWidget, QApplication
+
+    # Try to get Maya main window via OpenMayaUI + shiboken
+    try:
+        import maya.OpenMayaUI as omui
+        main_window_ptr = omui.MQtUtil.mainWindow()
+        if main_window_ptr:
+            # Try shiboken6 first (Maya 2024+)
+            try:
+                from shiboken6 import wrapInstance
+                return wrapInstance(int(main_window_ptr), QWidget)
+            except ImportError:
+                pass
+            # Try shiboken2 (Maya 2022/2023)
+            try:
+                from shiboken2 import wrapInstance
+                return wrapInstance(int(main_window_ptr), QWidget)
+            except ImportError:
+                pass
+    except Exception as e:
+        print(f"[MayaOutliner] OpenMayaUI method failed: {e}")
+
+    # Fallback: Find Maya main window from QApplication
+    app = QApplication.instance()
+    if app:
+        for widget in app.topLevelWidgets():
+            if widget.objectName() == 'MayaWindow':
+                return widget
+
+    return None
+
 try:
-    import maya.OpenMayaUI as omui
-    from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
-    from shiboken2 import wrapInstance
+    from qtpy.QtWidgets import QDialog, QVBoxLayout
 except ImportError as e:
-    pass  # Will use standalone mode
+    print(f"[MayaOutliner] Warning: Failed to import Qt components: {e}")
+    QDialog = None
+    QVBoxLayout = None
 
 
 class MayaOutlinerAPI:
@@ -1019,19 +1058,12 @@ class MayaOutliner:
                 url = "http://localhost:5173"
 
         # Get Maya main window as QWidget (for Qt backend)
-        maya_window = None
-        try:
-            if omui is not None and wrapInstance is not None and QWidget is not None:
-                # Get Maya main window pointer
-                main_window_ptr = omui.MQtUtil.mainWindow()
-                if main_window_ptr:
-                    # Wrap the pointer to get the QWidget
-                    maya_window = wrapInstance(int(main_window_ptr), QWidget)
-        except Exception as e:
-            pass
-
+        maya_window = _get_maya_main_window()
         if maya_window is None:
-            raise RuntimeError("Maya main window not found. Cannot create Qt WebView.")
+            raise RuntimeError(
+                "Maya main window not found. "
+                "Please ensure Maya UI is fully loaded before launching the outliner."
+            )
 
         from qtpy.QtWidgets import QDialog, QVBoxLayout
 
@@ -1055,10 +1087,20 @@ class MayaOutliner:
         # Create QtWebView as child widget (parent is dialog)
         # Event processing is automatic with QtWebView!
         # No need to call process_events() or create scriptJobs.
+        #
+        # For production mode with static files:
+        # - Use asset_root to enable auroraview:// protocol for loading assets
+        # - This is more secure than using file:// protocol directly
+        # Use allow_file_protocol for production mode to load local files
+        allow_file = is_production()
+        if allow_file:
+            print("[MayaOutliner] Production mode: enabling file:// protocol")
+
         self.webview = QtWebView(
             self.dialog,
-            dev_tools=True,
+            dev_tools=True,  # Always enable DevTools for debugging
             context_menu=self._context_menu,  # Disable native context menu for custom menus
+            allow_file_protocol=allow_file,  # Enable file:// protocol for production
         )
 
         # Set initial webview size (this is the content area size we want)
@@ -1094,8 +1136,22 @@ class MayaOutliner:
             _keep_alive_root=self.dialog,
         )
 
-        # Load URL
-        self.webview.load_url(url)
+        # Load content based on mode
+        if is_production():
+            # Production mode: use file:// URL directly
+            index_path = get_index_html_path()
+            if index_path and index_path.exists():
+                # Convert to file:// URL format
+                file_url = f"file:///{str(index_path).replace(chr(92), '/')}"
+                print(f"[MayaOutliner] Loading file URL: {file_url}")
+                self.webview.load_url(file_url)
+            else:
+                print(f"[MayaOutliner] Warning: index.html not found, falling back to URL: {url}")
+                self.webview.load_url(url)
+        else:
+            # Development mode: load from dev server URL
+            print(f"[MayaOutliner] Development mode, loading URL: {url}")
+            self.webview.load_url(url)
 
         # Show WebView (following official pattern)
         self.webview.show()

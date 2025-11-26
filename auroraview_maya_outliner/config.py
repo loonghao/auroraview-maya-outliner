@@ -100,6 +100,26 @@ class EnvironmentConfig:
         # Windows: C:/path/to/file -> file:///C:/path/to/file
         return f"file:///{abs_path.as_posix()}"
 
+    def get_dist_dir(self) -> Optional[Path]:
+        """Get the dist directory path for asset_root
+
+        Returns:
+            Path to dist directory if it exists, None otherwise
+        """
+        if not self.dist_exists:
+            return None
+        return self._dist_dir.resolve()
+
+    def get_index_html_path(self) -> Optional[Path]:
+        """Get the index.html file path
+
+        Returns:
+            Path to index.html if it exists, None otherwise
+        """
+        if not self.dist_exists:
+            return None
+        return self._index_html.resolve()
+
     def get_dev_url(self) -> str:
         """Get development server URL
 
@@ -199,5 +219,39 @@ def get_environment_info() -> dict:
     return _config.get_environment_info()
 
 
-__all__ = ["get_frontend_url", "get_environment_info", "EnvironmentConfig"]
+def get_dist_dir() -> Optional[Path]:
+    """Get the dist directory path for asset_root
+
+    Returns:
+        Path to dist directory if it exists, None otherwise
+    """
+    return _config.get_dist_dir()
+
+
+def get_index_html_path() -> Optional[Path]:
+    """Get the index.html file path
+
+    Returns:
+        Path to index.html if it exists, None otherwise
+    """
+    return _config.get_index_html_path()
+
+
+def is_production() -> bool:
+    """Check if running in production mode
+
+    Returns:
+        True if in production mode
+    """
+    return _config.is_production
+
+
+__all__ = [
+    "get_frontend_url",
+    "get_environment_info",
+    "get_dist_dir",
+    "get_index_html_path",
+    "is_production",
+    "EnvironmentConfig",
+]
 
