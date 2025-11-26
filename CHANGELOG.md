@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.3](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.2...maya-outliner-v0.1.3) (2025-11-26)
+
+
+### Features
+
+* add unit tests for release package validation ([b9d85dc](https://github.com/loonghao/auroraview-maya-outliner/commit/b9d85dc06794b6eef990042ed925cd365a9f64df))
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-vue-next to ^0.555.0 ([54556c5](https://github.com/loonghao/auroraview-maya-outliner/commit/54556c5c780ffc3f424b30109bbad8fb5673273f))
+* resolve release package issues with shelf, module loading and environment detection ([025df84](https://github.com/loonghao/auroraview-maya-outliner/commit/025df84a258981878c4dd877b4d9751bfffa182d))
+
 ## [0.1.2](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.1...maya-outliner-v0.1.2) (2025-11-26)
 
 
