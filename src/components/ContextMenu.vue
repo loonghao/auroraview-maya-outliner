@@ -27,7 +27,7 @@ const menuStyle = computed(() => {
     left: `${adjustedPosition.value.x}px`,
     top: `${adjustedPosition.value.y}px`,
     display: 'block',
-    position: 'fixed',
+    position: 'fixed' as const,
   }
 })
 

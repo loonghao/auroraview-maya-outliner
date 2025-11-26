@@ -28,7 +28,6 @@ export function useResponsiveScale(config: ScaleConfig = {}) {
     baseHeight = 600,
     minScale = 0.6,
     maxScale = 1.5,
-    smoothTransition = true,
     throttleDelay = 16 // ~60fps for smooth updates
   } = config
 
