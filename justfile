@@ -54,19 +54,34 @@ maya-2025: (setup-maya-env "2025")
     @Write-Host "Launching Maya 2025..."
     @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
 
-# Launch Maya 2022 with LOCAL development version
+# Launch Maya 2022 with LOCAL development version (no rebuild)
 maya-2022-local: (setup-maya-env-local "2022")
     @Write-Host "Launching Maya 2022 (LOCAL DEV)..."
     @if (Test-Path "{{MAYA_2022_PATH}}") { Start-Process "{{MAYA_2022_PATH}}" } else { Write-Host "ERROR: Maya 2022 not found at {{MAYA_2022_PATH}}"; Write-Host "Please update MAYA_2022_PATH in justfile"; exit 1 }
 
-# Launch Maya 2024 with LOCAL development version
+# Launch Maya 2024 with LOCAL development version (no rebuild)
 maya-2024-local: (setup-maya-env-local "2024")
     @Write-Host "Launching Maya 2024 (LOCAL DEV)..."
     @if (Test-Path "{{MAYA_2024_PATH}}") { Start-Process "{{MAYA_2024_PATH}}" } else { Write-Host "ERROR: Maya 2024 not found at {{MAYA_2024_PATH}}"; Write-Host "Please update MAYA_2024_PATH in justfile"; exit 1 }
 
-# Launch Maya 2025 with LOCAL development version
+# Launch Maya 2025 with LOCAL development version (no rebuild)
 maya-2025-local: (setup-maya-env-local "2025")
     @Write-Host "Launching Maya 2025 (LOCAL DEV)..."
+    @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
+
+# Launch Maya 2022 with LOCAL version (rebuild frontend first)
+maya-2022-build: build (setup-maya-env-local "2022")
+    @Write-Host "Launching Maya 2022 (LOCAL DEV with rebuild)..."
+    @if (Test-Path "{{MAYA_2022_PATH}}") { Start-Process "{{MAYA_2022_PATH}}" } else { Write-Host "ERROR: Maya 2022 not found at {{MAYA_2022_PATH}}"; Write-Host "Please update MAYA_2022_PATH in justfile"; exit 1 }
+
+# Launch Maya 2024 with LOCAL version (rebuild frontend first)
+maya-2024-build: build (setup-maya-env-local "2024")
+    @Write-Host "Launching Maya 2024 (LOCAL DEV with rebuild)..."
+    @if (Test-Path "{{MAYA_2024_PATH}}") { Start-Process "{{MAYA_2024_PATH}}" } else { Write-Host "ERROR: Maya 2024 not found at {{MAYA_2024_PATH}}"; Write-Host "Please update MAYA_2024_PATH in justfile"; exit 1 }
+
+# Launch Maya 2025 with LOCAL version (rebuild frontend first)
+maya-2025-build: build (setup-maya-env-local "2025")
+    @Write-Host "Launching Maya 2025 (LOCAL DEV with rebuild)..."
     @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
 
 # Clean Maya environment (remove userSetup.py)
