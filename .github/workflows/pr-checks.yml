@@ -131,12 +131,12 @@ jobs:
             "maya-outliner.mod"
             "install.bat"
             "install.ps1"
-            "userSetup.py"
+            "scripts/userSetup.py"
             "auroraview_maya_outliner/__init__.py"
             "auroraview_maya_outliner/maya_outliner.py"
             "dist/index.html"
           )
-          
+
           for file in "${required_files[@]}"; do
             if [ ! -f "$file" ] && [ ! -d "$file" ]; then
               echo "❌ Missing required file: $file"
@@ -144,27 +144,27 @@ jobs:
             fi
             echo "✅ Found: $file"
           done
-          
+
           # Verify mod file has correct PYTHONPATH
           echo ""
           echo "Checking .mod file content..."
           cat maya-outliner.mod
-          
-          if ! grep -q "PYTHONPATH +:= auroraview_maya_outliner" maya-outliner.mod; then
+
+          if ! grep -q "PYTHONPATH +:= \." maya-outliner.mod; then
             echo "❌ .mod file missing correct PYTHONPATH!"
             exit 1
           fi
           echo "✅ .mod file has correct PYTHONPATH"
-          
+
           # Verify userSetup.py has no placeholders
           echo ""
-          echo "Checking userSetup.py..."
-          if grep -q "{{PROJECT_ROOT}}" userSetup.py; then
+          echo "Checking scripts/userSetup.py..."
+          if grep -q "{{PROJECT_ROOT}}" scripts/userSetup.py; then
             echo "❌ userSetup.py still contains {{PROJECT_ROOT}} placeholder!"
             exit 1
           fi
           echo "✅ userSetup.py has no placeholders"
-          
+
           echo ""
           echo "✅ All verification checks passed!"
 
