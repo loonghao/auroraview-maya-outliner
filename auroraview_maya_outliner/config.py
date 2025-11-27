@@ -181,68 +181,18 @@ class EnvironmentConfig:
         }
 
 
-# Global instance
+# Global instance - use this directly or via convenience functions
 _config = EnvironmentConfig()
 
-
-def get_frontend_url(force_production: bool = False, force_development: bool = False) -> str:
-    """Get frontend URL based on environment configuration
-
-    This is the main entry point for getting the frontend URL.
-
-    Args:
-        force_production: Force production mode regardless of environment variable
-        force_development: Force development mode regardless of environment variable
-
-    Returns:
-        Frontend URL (either file:// for production or http:// for development)
-
-    Examples:
-        # Auto-detect based on AURORAVIEW_ENV
-        url = get_frontend_url()
-
-        # Force production mode
-        url = get_frontend_url(force_production=True)
-
-        # Force development mode
-        url = get_frontend_url(force_development=True)
-    """
-    return _config.get_url(force_production, force_development)
-
-
-def get_environment_info() -> dict:
-    """Get environment configuration information
-
-    Returns:
-        Dictionary with environment configuration details
-    """
-    return _config.get_environment_info()
-
-
-def get_dist_dir() -> Optional[Path]:
-    """Get the dist directory path for asset_root
-
-    Returns:
-        Path to dist directory if it exists, None otherwise
-    """
-    return _config.get_dist_dir()
-
-
-def get_index_html_path() -> Optional[Path]:
-    """Get the index.html file path
-
-    Returns:
-        Path to index.html if it exists, None otherwise
-    """
-    return _config.get_index_html_path()
+# Convenience functions - delegate to global instance
+get_frontend_url = _config.get_url
+get_environment_info = _config.get_environment_info
+get_dist_dir = _config.get_dist_dir
+get_index_html_path = _config.get_index_html_path
 
 
 def is_production() -> bool:
-    """Check if running in production mode
-
-    Returns:
-        True if in production mode
-    """
+    """Check if running in production mode"""
     return _config.is_production
 
 
