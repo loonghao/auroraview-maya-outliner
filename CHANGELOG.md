@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.5](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.4...maya-outliner-v0.1.5) (2025-11-27)
+
+
+### Features
+
+* enhance build system with vendor bundling and shelf integration ([8f8a6dc](https://github.com/loonghao/auroraview-maya-outliner/commit/8f8a6dc6aac3bde10053d2dee9c61ed42a9d2413))
+
+
+### Bug Fixes
+
+* update CI verification for new package structure ([d7dc321](https://github.com/loonghao/auroraview-maya-outliner/commit/d7dc3213d07e38889b248c08687467f6c6431066))
+
 ## [0.1.4](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.3...maya-outliner-v0.1.4) (2025-11-27)
 
 
