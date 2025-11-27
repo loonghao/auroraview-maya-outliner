@@ -52,8 +52,20 @@ module.exports = {
       fontFamily: {
         sans: ['system-ui', ...fontFamily.sans],
       },
+      // Container Query breakpoints (based on container width)
+      containers: {
+        'xs': '320px',   // Mobile small
+        'sm': '480px',   // Mobile large
+        'md': '640px',   // Tablet
+        'lg': '768px',   // Tablet large
+        'xl': '1024px',  // Desktop
+        '2xl': '1280px', // Desktop large
+      },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [
+    require('tailwindcss-animate'),
+    require('@tailwindcss/container-queries'),
+  ],
 }
 
