@@ -145,14 +145,15 @@ const handleNodeParent = (childName: string, parentName: string | null) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 0; /* Critical for flex children to shrink */
+  min-height: 0;
+  background: var(--maya-bg, #2b2b2b);
 }
 
 .tree-container {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: clamp(0.25rem, 0.2rem + 0.3vw, 0.75rem) 0;
+  padding: 2px 0;
   /* Smooth scrolling */
   scroll-behavior: smooth;
   /* GPU acceleration for scrolling */
@@ -164,9 +165,9 @@ const handleNodeParent = (childName: string, parentName: string | null) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: clamp(8rem, 6rem + 5vw, 12rem);
-  color: #64748b;
-  font-size: clamp(0.78rem, 0.72rem + 0.2vw, 0.9rem);
+  min-height: 100px;
+  color: #6b7280;
+  font-size: 12px;
 }
 </style>
 

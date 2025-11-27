@@ -2,6 +2,7 @@
 import { ref, onMounted, provide, watch } from 'vue'
 import OutlinerTree from './components/OutlinerTree.vue'
 import ContextMenu from './components/ContextMenu.vue'
+import Toolbar from './components/Toolbar.vue'
 import { useMayaIPC } from './composables/useMayaIPC'
 import { useContextMenu } from './composables/useContextMenu'
 import { useResponsiveScale } from './composables/useResponsiveScale'
@@ -9,8 +10,6 @@ import { getMayaContextMenuItems } from './config/mayaContextMenu'
 import { EventDataAdapter } from './utils/eventAdapter'
 import { storage } from './utils/storage'
 import type { MayaNode } from './types'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -52,6 +51,74 @@ const expandAll = () => {
 
 const collapseAll = () => {
   collapseAllTrigger.value++
+}
+
+// Refresh scene data from Maya
+const refreshSceneData = async () => {
+  try {
+    const result = await getSceneHierarchy()
+    if (result) {
+      sceneData.value = result
+    }
+  } catch (error) {
+    console.error('[App] Failed to refresh scene data:', error)
+  }
+}
+
+// Handle add node from toolbar
+const handleAddNode = async () => {
+  try {
+    // Create a new empty group node
+    await callAPI('create_node', { type: 'transform', name: 'group' })
+    await refreshSceneData()
+  } catch (error) {
+    console.error('[App] Failed to create node:', error)
+  }
+}
+
+// Handle delete selected node from toolbar
+const handleDeleteSelected = async () => {
+  if (!selectedNode.value) return
+
+  try {
+    await callAPI('delete_node', { name: selectedNode.value })
+    selectedNode.value = null
+    await refreshSceneData()
+  } catch (error) {
+    console.error('[App] Failed to delete node:', error)
+  }
+}
+
+// Handle drop on root (unparent node)
+const handleDropOnRoot = async (event: DragEvent) => {
+  const nodeName = event.dataTransfer?.getData('text/plain')
+  if (!nodeName) return
+
+  try {
+    await callAPI('parent_node', { child: nodeName, parent: null })
+    await refreshSceneData()
+  } catch (error) {
+    console.error('[App] Failed to unparent node:', error)
+  }
+}
+
+// Handle right-click on empty area
+const handleRootContextMenu = (event: MouseEvent) => {
+  const items = [
+    {
+      label: 'Create Empty Group',
+      action: async () => {
+        await handleAddNode()
+      }
+    },
+    {
+      label: 'Refresh',
+      action: async () => {
+        await refreshSceneData()
+      }
+    }
+  ]
+  contextMenu.show(event.clientX, event.clientY, items)
 }
 
 // Load preferences from IndexedDB
@@ -419,7 +486,7 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
 </script>
 
 <template>
-  <div class="app-wrapper">
+  <div class="app-wrapper" @contextmenu.prevent>
     <!-- Edge buffer zones to prevent WebView from capturing resize events -->
     <div class="edge-buffer edge-buffer-top"></div>
     <div class="edge-buffer edge-buffer-right"></div>
@@ -431,57 +498,40 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
     <div class="edge-buffer edge-buffer-bottom-right"></div>
 
     <div class="app-container" :style="scaleStyle">
-      <header class="app-header">
-      <div class="app-header-inner">
-        <div class="app-title-block">
-          <h1 class="app-title">Maya Outliner</h1>
-          <p class="app-subtitle">AuroraView scene hierarchy</p>
-        </div>
-        <div class="status-badges">
-          <Badge
-            :variant="isConnected ? 'default' : 'outline'"
-            class="connection-status"
-            :class="{ connected: isConnected }"
-          >
-            <span class="status-dot"></span>
-            <span class="status-label">
-              {{ isConnected ? 'Connected' : 'Disconnected' }}
-            </span>
-          </Badge>
-          <Badge
-            v-if="isUpdating"
-            variant="secondary"
-            class="updating-status"
-          >
-            <span class="updating-spinner"></span>
-            <span class="status-label">Updating...</span>
-          </Badge>
-        </div>
-      </div>
-    </header>
+      <!-- Maya-style Outliner Panel -->
+      <div class="outliner-panel">
+        <!-- Panel Header -->
+        <header class="panel-header">
+          <span class="panel-title">Outliner</span>
+          <div class="status-badges">
+            <Badge
+              :variant="isConnected ? 'default' : 'outline'"
+              class="connection-status"
+              :class="{ connected: isConnected }"
+            >
+              <span class="status-dot"></span>
+            </Badge>
+            <span v-if="isUpdating" class="updating-indicator"></span>
+          </div>
+        </header>
 
-    <div class="search-bar">
-      <Input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Search nodes..."
-        class="search-input"
-      />
-      <div class="filter-options">
-        <label class="filter-checkbox">
-          <input type="checkbox" v-model="showDAGOnly" />
-          <span>DAG Objects Only</span>
-        </label>
-        <label class="filter-checkbox">
-          <input type="checkbox" v-model="showHidden" />
-          <span>Show Hidden</span>
-        </label>
-      </div>
-    </div>
+        <!-- Toolbar -->
+        <Toolbar
+          :filter-text="searchQuery"
+          :has-selection="selectedNode !== null"
+          @update:filter-text="searchQuery = $event"
+          @add-node="handleAddNode"
+          @delete-selected="handleDeleteSelected"
+          @expand-all="expandAll"
+          @collapse-all="collapseAll"
+        />
 
-    <main class="app-main">
-      <Card class="app-card">
-        <CardContent class="app-card-content">
+        <!-- Tree Content -->
+        <main class="tree-content"
+          @dragover.prevent
+          @drop="handleDropOnRoot"
+          @contextmenu.prevent="handleRootContextMenu"
+        >
           <ScrollArea class="tree-scroll-area">
             <OutlinerTree
               :nodes="sceneData"
@@ -495,26 +545,29 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
               @context-menu="handleContextMenu"
               @node-parent="handleNodeParent"
             />
+
+            <div v-if="sceneData.length === 0" class="empty-state">
+              <p>Scene is empty.</p>
+              <p class="empty-hint">Drag nodes here or use + to create.</p>
+            </div>
           </ScrollArea>
-        </CardContent>
-      </Card>
-    </main>
+        </main>
+      </div>
 
-    <footer class="app-footer">
-      <p>AuroraView Maya Outliner Example</p>
-      <p class="stats">
-        Nodes: {{ sceneData.length }} | Selected: {{ selectedNode || 'None' }}
-      </p>
-    </footer>
+      <!-- Footer Status Bar -->
+      <footer class="status-bar">
+        <span>Selected: {{ selectedNode || 'None' }}</span>
+        <span class="node-count">{{ sceneData.length }} nodes</span>
+      </footer>
 
-    <!-- Context Menu -->
-    <ContextMenu
-      :visible="contextMenu.visible.value"
-      :x="contextMenu.position.value.x"
-      :y="contextMenu.position.value.y"
-      :items="contextMenu.items.value"
-      @close="contextMenu.hide"
-    />
+      <!-- Context Menu -->
+      <ContextMenu
+        :visible="contextMenu.visible.value"
+        :x="contextMenu.position.value.x"
+        :y="contextMenu.position.value.y"
+        :items="contextMenu.items.value"
+        @close="contextMenu.hide"
+      />
     </div>
   </div>
 </template>
@@ -620,8 +673,9 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
   flex-direction: column;
   align-items: stretch;
   padding: 0;
-  background: #020617; /* Solid background to prevent white flash */
-  color: #e5e7eb;
+  background: var(--maya-panel, #1f1f1f);
+  color: var(--maya-text, #c8c8c8);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
   /* GPU acceleration hints */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
@@ -629,94 +683,65 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
   -webkit-transform-style: preserve-3d;
 }
 
-.app-header {
-  border-radius: 0;
-  padding: clamp(0.7rem, 0.55rem + 0.4vw, 1rem)
-    clamp(1rem, 0.8rem + 1.2vw, 1.8rem);
-  background: rgba(15, 23, 42, 0.98);
-  border: none;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.55);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.85);
-  margin: 0;
+/* Maya-style Outliner Panel */
+.outliner-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--maya-bg, #2b2b2b);
+  overflow: hidden;
+  min-height: 0;
 }
 
-.app-header-inner {
+/* Panel Header */
+.panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: clamp(0.75rem, 0.5rem + 0.8vw, 1.5rem);
+  padding: 4px 8px;
+  background: var(--maya-panel, #1f1f1f);
+  border-bottom: 1px solid var(--maya-border, #111111);
+  min-height: 24px;
 }
 
-.app-title-block {
+.panel-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--maya-text, #c8c8c8);
+}
+
+/* Status badges in header */
+.status-badges {
   display: flex;
-  flex-direction: column;
-  gap: clamp(0.15rem, 0.1rem + 0.2vw, 0.35rem);
-}
-
-.app-title {
-  margin: 0;
-  font-size: clamp(1.1rem, 0.95rem + 0.6vw, 1.6rem);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.app-subtitle {
-  margin: 0;
-  font-size: clamp(0.7rem, 0.65rem + 0.2vw, 0.85rem);
-  color: #94a3b8;
+  align-items: center;
+  gap: 4px;
 }
 
 .connection-status {
   display: inline-flex;
   align-items: center;
-  gap: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
-  padding: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem)
-    clamp(0.75rem, 0.6rem + 0.4vw, 1.2rem);
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  font-size: clamp(0.7rem, 0.65rem + 0.15vw, 0.85rem);
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: transparent;
+  border: none;
+  font-size: 10px;
 }
 
 .status-dot {
-  width: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
-  height: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
-  border-radius: 999px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: #f97373;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9);
 }
 
 .connection-status.connected .status-dot {
   background: #4ade80;
 }
 
-.status-label {
-  white-space: nowrap;
-}
-
-.status-badges {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.updating-status {
-  display: inline-flex;
-  align-items: center;
-  gap: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
-  padding: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem)
-    clamp(0.75rem, 0.6rem + 0.4vw, 1.2rem);
-  border-radius: 999px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  font-size: clamp(0.7rem, 0.65rem + 0.15vw, 0.85rem);
-  color: #60a5fa;
-}
-
-.updating-spinner {
-  width: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
-  height: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
-  border: 2px solid rgba(59, 130, 246, 0.3);
+.updating-indicator {
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-top-color: #60a5fa;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -728,122 +753,53 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
   }
 }
 
-.search-bar {
-  margin: 0;
-  padding: clamp(0.5rem, 0.35rem + 0.6vw, 1rem) clamp(1rem, 0.8rem + 1.2vw, 1.8rem);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(0.5rem, 0.4rem + 0.3vw, 0.8rem);
-  background: rgba(15, 23, 42, 0.5);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-}
-
-.search-input {
-  width: 100%;
-  padding: clamp(0.55rem, 0.45rem + 0.3vw, 0.9rem)
-    clamp(0.75rem, 0.6rem + 0.6vw, 1.4rem);
-  background: rgba(15, 23, 42, 0.98);
-  border: 1px solid rgba(51, 65, 85, 1);
-  border-radius: clamp(0.55rem, 0.45rem + 0.3vw, 0.9rem);
-  color: #e5e7eb;
-  font-size: clamp(0.78rem, 0.72rem + 0.2vw, 0.9rem);
-}
-
-.search-input::placeholder {
-  color: #64748b;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
-}
-
-.filter-options {
-  display: flex;
-  gap: clamp(1rem, 0.8rem + 0.5vw, 1.5rem);
-  padding: clamp(0.4rem, 0.3rem + 0.2vw, 0.6rem) clamp(0.5rem, 0.4rem + 0.3vw, 0.8rem);
-  background: rgba(15, 23, 42, 0.6);
-  border-radius: clamp(0.4rem, 0.3rem + 0.2vw, 0.6rem);
-}
-
-.filter-checkbox {
-  display: flex;
-  align-items: center;
-  gap: clamp(0.35rem, 0.3rem + 0.1vw, 0.5rem);
-  font-size: clamp(0.75rem, 0.7rem + 0.15vw, 0.85rem);
-  color: #cbd5e1;
-  cursor: pointer;
-  user-select: none;
-}
-
-.filter-checkbox input[type="checkbox"] {
-  width: clamp(0.9rem, 0.8rem + 0.2vw, 1.1rem);
-  height: clamp(0.9rem, 0.8rem + 0.2vw, 1.1rem);
-  cursor: pointer;
-  accent-color: #38bdf8;
-}
-
-.filter-checkbox:hover {
-  color: #e5e7eb;
-}
-
-.app-main {
+/* Tree Content Area */
+.tree-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: 0;
-  padding: clamp(0.6rem, 0.45rem + 0.5vw, 1rem) clamp(1rem, 0.8rem + 1.2vw, 1.8rem);
-  min-height: 0; /* Critical for flex children to shrink */
-}
-
-.app-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-radius: 0;
-  background: rgba(15, 23, 42, 0.98);
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  overflow: hidden;
-  min-height: 0; /* Critical for flex children to shrink */
-}
-
-.app-card-content {
-  padding: 0 !important;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0; /* Critical for flex children to shrink */
+  min-height: 0;
+  background: var(--maya-bg, #2b2b2b);
 }
 
 .tree-scroll-area {
   flex: 1;
-  min-height: 0; /* Critical for flex children to shrink */
+  min-height: 0;
 }
 
-.app-footer {
-  margin: 0;
-  padding: clamp(0.55rem, 0.45rem + 0.3vw, 0.85rem)
-    clamp(0.8rem, 0.65rem + 0.7vw, 1.6rem);
-  border-radius: 0;
-  background: rgba(15, 23, 42, 0.98);
-  border: none;
-  border-top: 1px solid rgba(30, 64, 175, 0.6);
-  font-size: clamp(0.7rem, 0.65rem + 0.15vw, 0.85rem);
-  color: #94a3b8;
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: #6b7280;
+  font-size: 12px;
+  text-align: center;
+}
+
+.empty-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #4b5563;
+}
+
+/* Status Bar */
+.status-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: clamp(0.35rem, 0.3rem + 0.2vw, 0.75rem);
+  padding: 4px 8px;
+  background: var(--maya-panel, #1f1f1f);
+  border-top: 1px solid var(--maya-border, #111111);
+  font-size: 11px;
+  color: #6b7280;
 }
 
-.stats {
-  margin: 0;
-  color: #64748b;
+.node-count {
+  color: #4b5563;
 }
 </style>
 

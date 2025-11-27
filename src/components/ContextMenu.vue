@@ -223,23 +223,23 @@ watch(
 <style scoped>
 .context-menu {
   position: fixed;
-  background: #2b2b2b;
-  border: 1px solid #3c3c3c;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  min-width: 180px;
+  background: var(--maya-bg, #2b2b2b);
+  border: 1px solid var(--maya-border, #111111);
+  border-radius: 2px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
   max-width: 280px;
   z-index: 9999;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
   font-size: 12px;
   padding: 4px 0;
   user-select: none;
 }
 
 .context-menu-item {
-  padding: 6px 20px 6px 12px;
+  padding: 6px 16px;
   cursor: pointer;
-  color: #cccccc;
+  color: var(--maya-text, #c8c8c8);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -248,7 +248,7 @@ watch(
 }
 
 .context-menu-item:hover:not(.disabled) {
-  background: #094771;
+  background: var(--maya-select, #5285a6);
   color: #ffffff;
 }
 
@@ -263,7 +263,7 @@ watch(
 }
 
 .context-menu-item.active {
-  background: #094771;
+  background: var(--maya-select, #5285a6);
   color: #ffffff;
 }
 
@@ -278,7 +278,7 @@ watch(
   position: absolute;
   right: 8px;
   font-size: 10px;
-  color: #999999;
+  color: #6b7280;
 }
 
 .context-menu-item:hover:not(.disabled) .submenu-arrow {
@@ -288,13 +288,17 @@ watch(
 .menu-item-shortcut {
   margin-left: 16px;
   font-size: 11px;
-  color: #999999;
+  color: #6b7280;
+}
+
+.context-menu-item:hover:not(.disabled) .menu-item-shortcut {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .context-menu-separator {
   height: 1px;
-  background: #3c3c3c;
-  margin: 4px 8px;
+  background: #444444;
+  margin: 4px 4px;
 }
 </style>
 

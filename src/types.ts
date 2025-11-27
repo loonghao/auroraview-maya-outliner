@@ -29,7 +29,21 @@ export type MayaNodeType =
   | 'particleCloud'
   | 'nurbsCurve'
   | 'nurbsSurface'
+  | 'curve'
   | 'unknown'
+
+/**
+ * Node type enum for better type safety (matches new design)
+ */
+export enum NodeType {
+  TRANSFORM = 'transform',
+  MESH = 'mesh',
+  CAMERA = 'camera',
+  LIGHT = 'light',
+  JOINT = 'joint',
+  CURVE = 'curve',
+  GROUP = 'group',
+}
 
 /**
  * Maya scene node
@@ -55,6 +69,46 @@ export interface MayaNode {
 
   /** Selection state */
   selected: boolean
+}
+
+/**
+ * Context menu item definition
+ */
+export interface ContextMenuItem {
+  /** Menu item label */
+  label: string
+  /** Action callback */
+  action: () => void
+  /** Optional keyboard shortcut display */
+  shortcut?: string
+  /** Whether this is a separator */
+  separator?: boolean
+}
+
+/**
+ * Context menu state
+ */
+export interface ContextMenuState {
+  visible: boolean
+  x: number
+  y: number
+  targetNode: MayaNode | null
+}
+
+/**
+ * Selection state for multi-selection support
+ */
+export interface SelectionState {
+  ids: Set<string>
+  lastSelectedId: string | null
+}
+
+/**
+ * Drag item for drag and drop
+ */
+export interface DragItem {
+  id: string
+  type: 'NODE'
 }
 
 /**

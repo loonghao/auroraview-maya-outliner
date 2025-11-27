@@ -143,3 +143,43 @@ html, body {
   box-sizing: border-box;
   background: #020617 !important;
 }
+
+/* ==========================================================================
+   Maya-Style Theme Variables and Utilities
+   ========================================================================== */
+
+:root {
+  /* Maya color palette */
+  --maya-bg: #2b2b2b;
+  --maya-panel: #1f1f1f;
+  --maya-text: #c8c8c8;
+  --maya-select: #5285a6;
+  --maya-select-active: #6597b8;
+  --maya-border: #111111;
+  --maya-hover: #3e3e3e;
+}
+
+/* Maya-style scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--maya-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Extra small font size utility */
+.text-xxs {
+  font-size: 0.65rem;
+  line-height: 1rem;
+}

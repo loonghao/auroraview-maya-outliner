@@ -27,10 +27,12 @@ if (-not (Test-Path $mayaModulesDir)) {
 }
 
 # Create .mod file pointing to current directory
+# Note: PYTHONPATH should point to the module root (not auroraview_maya_outliner subdirectory)
+# so that `from auroraview_maya_outliner import xxx` works correctly
 Write-Host "Creating module file..." -ForegroundColor Green
 @"
 + maya-outliner dev $scriptDir
-PYTHONPATH +:= auroraview_maya_outliner
+PYTHONPATH +:= .
 "@ | Out-File -FilePath $modFile -Encoding utf8
 
 Write-Host ""

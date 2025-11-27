@@ -21,6 +21,10 @@ A modern, web-based Maya Outliner built with **AuroraView**, **Vue 3**, and **Ty
 - 🎨 **Modern UI** - Clean, dark-themed interface built with Vue 3
 - 🔄 **Live Updates** - Automatic UI updates when scene changes
 
+## 🖼️ Preview
+
+![AuroraView Maya Outliner Preview](./docs/preview.png)
+
 ## 🏗️ Architecture
 
 ```
