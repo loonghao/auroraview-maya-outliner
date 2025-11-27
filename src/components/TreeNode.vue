@@ -342,27 +342,28 @@ const handleDrop = (event: DragEvent) => {
 .node-row {
   display: flex;
   align-items: center;
-  gap: clamp(0.35rem, 0.3rem + 0.2vw, 0.75rem);
-  padding: clamp(0.3rem, 0.25rem + 0.3vw, 0.7rem)
-    clamp(0.5rem, 0.4rem + 0.5vw, 1rem);
-  cursor: pointer;
-  transition: background-color 0.12s ease-out, box-shadow 0.12s ease-out,
-    border-color 0.12s ease-out;
-  border-radius: clamp(0.35rem, 0.3rem + 0.2vw, 0.6rem);
-  margin: clamp(0.05rem, 0.03rem + 0.1vw, 0.2rem) 0;
+  height: 24px;
+  gap: 4px;
+  padding: 0 4px;
+  cursor: default;
+  transition: background-color 0.1s ease;
+  border-radius: 0;
+  margin: 0;
+  color: var(--maya-text, #c8c8c8);
 }
 
 .node-row:hover {
-  background-color: rgba(30, 64, 175, 0.35);
+  background-color: var(--maya-hover, #3e3e3e);
 }
 
 .node-row.selected {
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.35) 0%, rgba(56, 189, 248, 0.15) 100%),
-    rgba(15, 23, 42, 0.95);
-  border-left: 3px solid #38bdf8;
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3),
-              0 2px 8px rgba(56, 189, 248, 0.2);
-  transform: translateX(2px);
+  background: var(--maya-select, #5285a6);
+  color: #ffffff;
+}
+
+.node-row.hidden-node {
+  color: #6b7280;
+  font-style: italic;
 }
 
 /* Drag and drop styles */
@@ -404,15 +405,18 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .expand-btn {
-  width: clamp(0.8rem, 0.72rem + 0.2vw, 1rem);
-  height: clamp(0.8rem, 0.72rem + 0.2vw, 1rem);
+  width: 16px;
+  height: 16px;
   padding: 0;
   background: none;
   border: none;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: transform 0.18s ease-out, color 0.12s ease-out;
-  font-size: clamp(0.6rem, 0.55rem + 0.15vw, 0.75rem);
+  transition: transform 0.15s ease;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .expand-btn.expanded {
@@ -420,22 +424,23 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .expand-btn:hover {
-  color: #e5e7eb;
+  color: #ffffff;
 }
 
 .expand-spacer {
-  width: clamp(0.8rem, 0.72rem + 0.2vw, 1rem);
+  width: 16px;
 }
 
 .node-icon {
-  width: clamp(0.9rem, 0.85rem + 0.15vw, 1.1rem);
-  height: clamp(0.9rem, 0.85rem + 0.15vw, 1.1rem);
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.85;
+  opacity: 0.9;
+  margin-right: 4px;
 }
 
 /* Node type icons */
@@ -472,8 +477,8 @@ const handleDrop = (event: DragEvent) => {
 
 .node-name {
   flex: 1;
-  font-size: clamp(0.8rem, 0.75rem + 0.15vw, 0.95rem);
-  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -481,51 +486,54 @@ const handleDrop = (event: DragEvent) => {
 
 .node-name-input {
   flex: 1;
-  font-size: clamp(0.8rem, 0.75rem + 0.15vw, 0.95rem);
-  color: #e5e7eb;
-  background: rgba(30, 41, 59, 0.95);
-  border: 1px solid #38bdf8;
-  border-radius: 4px;
-  padding: 2px 6px;
+  font-size: 12px;
+  color: #ffffff;
+  background: #000000;
+  border: 1px solid var(--maya-select, #5285a6);
+  padding: 0 4px;
   outline: none;
+  height: 20px;
+  position: absolute;
+  top: 2px;
+  left: 0;
+  right: 0;
 }
 
 .node-type {
-  font-size: clamp(0.65rem, 0.6rem + 0.15vw, 0.8rem);
-  color: #9ca3af;
-  padding: clamp(0.05rem, 0.03rem + 0.05vw, 0.15rem)
-    clamp(0.35rem, 0.3rem + 0.2vw, 0.6rem);
-  background: rgba(15, 23, 42, 0.98);
-  border-radius: 999px;
-  border: 1px solid rgba(51, 65, 85, 0.9);
+  display: none; /* Hide type badge in Maya style - we use icons instead */
 }
 
 .visibility-btn {
-  width: clamp(1.1rem, 1rem + 0.3vw, 1.4rem);
-  height: clamp(1.1rem, 1rem + 0.3vw, 1.4rem);
+  width: 24px;
+  height: 100%;
   padding: 0;
   background: none;
   border: none;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.15s ease-out, transform 0.12s ease-out;
+  opacity: 0;
+  transition: opacity 0.1s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.node-row:hover .visibility-btn,
+.visibility-btn.always-show {
+  opacity: 0.5;
+}
+
 .visibility-btn:hover {
   opacity: 1;
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .visibility-btn.hidden {
-  opacity: 0.35;
+  opacity: 1;
 }
 
 .visibility-icon {
-  width: 100%;
-  height: 100%;
+  width: 12px;
+  height: 12px;
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
@@ -533,12 +541,12 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .icon-visible {
-  background-color: #60a5fa;
+  background-color: currentColor;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 3C4.5 3 1.5 6 1 8c.5 2 3.5 5 7 5s6.5-3 7-5c-.5-2-3.5-5-7-5z' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3Ccircle cx='8' cy='8' r='2' fill='currentColor'/%3E%3C/svg%3E");
 }
 
 .icon-hidden {
-  background-color: #94a3b8;
+  background-color: currentColor;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M1 1l14 14M4 4C2.5 5 1.5 6.5 1 8c.5 2 3.5 5 7 5 1 0 2-.3 3-.7M8 3c3.5 0 6.5 3 7 5-.3 1-1 2-2 3' fill='none' stroke='currentColor' stroke-width='1.5'/%3E%3C/svg%3E");
 }
 

@@ -21,6 +21,10 @@
 - 🎨 **现代化 UI** - 使用 Vue 3 构建的简洁深色主题界面
 - 🔄 **实时更新** - 场景变化时自动更新 UI
 
+## 🖼️ 演示
+
+![AuroraView Maya Outliner 预览](./docs/preview.png)
+
 ## 🏗️ 架构
 
 ```

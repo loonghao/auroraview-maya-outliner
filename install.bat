@@ -27,9 +27,11 @@ if not exist "%MAYA_MODULES_DIR%" (
 )
 
 REM Create .mod file pointing to current directory
+REM Note: PYTHONPATH should point to the module root (not auroraview_maya_outliner subdirectory)
+REM so that `from auroraview_maya_outliner import xxx` works correctly
 echo Creating module file...
 echo + maya-outliner dev %SCRIPT_DIR% > "%MOD_FILE%"
-echo PYTHONPATH +:= auroraview_maya_outliner >> "%MOD_FILE%"
+echo PYTHONPATH +:= . >> "%MOD_FILE%"
 
 echo.
 echo ========================================

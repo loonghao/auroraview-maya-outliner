@@ -43,6 +43,16 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Maya-style theme colors
+        maya: {
+          bg: '#2b2b2b',
+          panel: '#1f1f1f',
+          text: '#c8c8c8',
+          select: '#5285a6',
+          selectActive: '#6597b8',
+          border: '#111111',
+          hover: '#3e3e3e',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

@@ -27,10 +27,12 @@ if [ ! -d "$MAYA_MODULES_DIR" ]; then
 fi
 
 # Create .mod file pointing to current directory
+# Note: PYTHONPATH should point to the module root (not auroraview_maya_outliner subdirectory)
+# so that `from auroraview_maya_outliner import xxx` works correctly
 echo "Creating module file..."
 cat > "$MOD_FILE" << EOF
 + maya-outliner dev $SCRIPT_DIR
-PYTHONPATH +:= auroraview_maya_outliner
+PYTHONPATH +:= .
 EOF
 
 echo ""
