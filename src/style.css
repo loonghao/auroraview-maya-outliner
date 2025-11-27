@@ -2,6 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Container Queries - Component-Level Responsive Design
+   ========================================================================== */
+
+/**
+ * Container Query Layout Strategy:
+ *
+ * 1. Define container context with `container-type: inline-size`
+ * 2. Use `@container` rules for component-level responsiveness
+ * 3. Combine with CSS Grid (2D) and Flexbox (1D) for smart layouts
+ *
+ * Breakpoints (based on container width):
+ * - xs:  320px  (mobile small)
+ * - sm:  480px  (mobile large)
+ * - md:  640px  (tablet)
+ * - lg:  768px  (tablet large)
+ * - xl:  1024px (desktop)
+ * - 2xl: 1280px (desktop large)
+ */
+
+/* Base container utility classes (Tailwind v4 native syntax) */
+/* Use Tailwind's built-in @container classes: @container, @container/name */
+
+/* Named container definitions for semantic layout areas */
+.container-main {
+  container-type: inline-size;
+  container-name: main;
+}
+
+.container-sidebar {
+  container-type: inline-size;
+  container-name: sidebar;
+}
+
+.container-card {
+  container-type: inline-size;
+  container-name: card;
+}
+
+.container-panel {
+  container-type: inline-size;
+  container-name: panel;
+}
+
+.container-grid {
+  container-type: inline-size;
+  container-name: grid;
+}
+
 :root {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;

@@ -64,6 +64,7 @@ except ImportError as e:
 
 # Import environment configuration
 from .config import (
+    get_dist_dir,
     get_environment_info,
     get_frontend_url,
     get_index_html_path,
@@ -1091,16 +1092,15 @@ class MayaOutliner:
         # For production mode with static files:
         # - Use asset_root to enable auroraview:// protocol for loading assets
         # - This is more secure than using file:// protocol directly
-        # Use allow_file_protocol for production mode to load local files
-        allow_file = is_production()
-        if allow_file:
-            print("[MayaOutliner] Production mode: enabling file:// protocol")
+        dist_dir = get_dist_dir() if is_production() else None
+        if dist_dir:
+            print(f"[MayaOutliner] Production mode: using asset_root={dist_dir}")
 
         self.webview = QtWebView(
             self.dialog,
             dev_tools=True,  # Always enable DevTools for debugging
             context_menu=self._context_menu,  # Disable native context menu for custom menus
-            allow_file_protocol=allow_file,  # Enable file:// protocol for production
+            asset_root=str(dist_dir) if dist_dir else None,  # Enable auroraview:// protocol
         )
 
         # Set initial webview size (this is the content area size we want)
@@ -1137,14 +1137,15 @@ class MayaOutliner:
         )
 
         # Load content based on mode
-        if is_production():
-            # Production mode: use file:// URL directly
+        if is_production() and dist_dir:
+            # Production mode: use load_file() with asset_root (auroraview:// protocol)
+            # load_file() requires ABSOLUTE path, auroraview checks if it's under asset_root
             index_path = get_index_html_path()
             if index_path and index_path.exists():
-                # Convert to file:// URL format
-                file_url = f"file:///{str(index_path).replace(chr(92), '/')}"
-                print(f"[MayaOutliner] Loading file URL: {file_url}")
-                self.webview.load_url(file_url)
+                abs_path = str(index_path.resolve())
+                print(f"[MayaOutliner] Loading file: {abs_path}")
+                print(f"[MayaOutliner] asset_root: {dist_dir}")
+                self.webview.load_file(abs_path)
             else:
                 print(f"[MayaOutliner] Warning: index.html not found, falling back to URL: {url}")
                 self.webview.load_url(url)
