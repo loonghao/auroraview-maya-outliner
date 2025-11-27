@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.4](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.3...maya-outliner-v0.1.4) (2025-11-27)
+
+
+### Features
+
+* use asset_root and load_file for production mode ([8e78a2d](https://github.com/loonghao/auroraview-maya-outliner/commit/8e78a2d530a22f90725ac72dfece12fecce9ef58))
+
+
+### Bug Fixes
+
+* shelf setup script and static file loading for production mode ([1a4be9a](https://github.com/loonghao/auroraview-maya-outliner/commit/1a4be9a465b8cf54f55ef8d927e3ef2a4b24fbe5))
+
+
+### Code Refactoring
+
+* simplify config module by removing duplicate wrapper functions ([9a9685d](https://github.com/loonghao/auroraview-maya-outliner/commit/9a9685d58f28de0fe672fa54e1f83c9bbe27e838))
+
 ## [0.1.3](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.2...maya-outliner-v0.1.3) (2025-11-26)
 
 
