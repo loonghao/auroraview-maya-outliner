@@ -83,7 +83,7 @@ jobs:
           unzip -l "$PACKAGE_FILE"
 
       - name: Upload package artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: maya-outliner-package
           path: dist/maya-outliner-*.zip
@@ -102,7 +102,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download package artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: maya-outliner-package
           path: release-artifacts
