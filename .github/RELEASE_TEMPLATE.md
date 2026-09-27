@@ -32,9 +32,9 @@ mayapy -m pip install auroraview[qt]
 
 ## 📚 Documentation
 
-- [Installation Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/INSTALLATION.md)
+- [Installation Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/docs/INSTALLATION.md)
 - [Quick Start](https://github.com/loonghao/auroraview-maya-outliner/blob/main/QUICKSTART.md)
-- [Deployment Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/DEPLOYMENT.md)
+- [Deployment Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/docs/DEPLOYMENT.md)
 - [Local Development](https://github.com/loonghao/auroraview-maya-outliner/blob/main/LOCAL_DEVELOPMENT.md)
 
 ## ✨ Features
