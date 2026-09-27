@@ -69,11 +69,11 @@ def make_maya_package(session: nox.Session) -> None:
     
     # 5. Copy documentation
     print("📁 Copying documentation...")
-    docs_to_copy = ["README.md", "README_zh.md", "DEPLOYMENT.md", "QUICKSTART.md"]
+    docs_to_copy = ["README.md", "README_zh.md", "docs/DEPLOYMENT.md", "QUICKSTART.md"]
     for doc in docs_to_copy:
         doc_path = PROJECT_ROOT / doc
         if doc_path.exists():
-            shutil.copy2(doc_path, package_dir / doc)
+            shutil.copy2(doc_path, package_dir / Path(doc).name)
     
     # 6. Create .mod file
     print("📝 Creating Maya module file...")

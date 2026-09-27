@@ -165,8 +165,8 @@ jobs:
 
             ## 📚 Documentation
 
-            - [Installation Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/INSTALLATION.md)
-            - [Build Package Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/BUILD_PACKAGE.md)
+            - [Installation Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/docs/INSTALLATION.md)
+            - [Build Package Guide](https://github.com/loonghao/auroraview-maya-outliner/blob/main/docs/BUILD_PACKAGE.md)
           draft: false
           prerelease: false
           allowUpdates: true
