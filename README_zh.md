@@ -7,7 +7,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![AuroraView](https://img.shields.io/badge/AuroraView-Rust-orange?logo=rust&logoColor=white)](../../README_zh.md)
 
-[English Documentation](./README.md) | [📦 安装指南](./INSTALLATION.md) | [快速开始](./QUICKSTART.md) | [部署指南](./DEPLOYMENT.md) | [本地开发](./LOCAL_DEVELOPMENT.md)
+[English Documentation](./README.md) | [📦 安装指南](./docs/INSTALLATION.md) | [快速开始](./QUICKSTART.md) | [部署指南](./docs/DEPLOYMENT.md) | [本地开发](./LOCAL_DEVELOPMENT.md)
 
 使用 **AuroraView**、**Vue 3** 和 **TypeScript** 构建的现代化、基于 Web 的 Maya 大纲视图。此示例演示了如何使用直接嵌入 Maya 的现代 Web 技术创建高性能 DCC 工具。
 
@@ -67,7 +67,7 @@
    main()
    ```
 
-📖 **[完整安装指南](./INSTALLATION.md)** - 所有平台的详细安装说明
+📖 **[完整安装指南](./docs/INSTALLATION.md)** - 所有平台的详细安装说明
 
 ### 开发者安装
 

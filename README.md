@@ -7,7 +7,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![AuroraView](https://img.shields.io/badge/AuroraView-Rust-orange?logo=rust&logoColor=white)](../../README.md)
 
-[中文文档](./README_zh.md) | [📦 Installation](./INSTALLATION.md) | [Quick Start](./QUICKSTART.md) | [Deployment Guide](./DEPLOYMENT.md) | [Local Development](./LOCAL_DEVELOPMENT.md)
+[中文文档](./README_zh.md) | [📦 Installation](./docs/INSTALLATION.md) | [Quick Start](./QUICKSTART.md) | [Deployment Guide](./docs/DEPLOYMENT.md) | [Local Development](./LOCAL_DEVELOPMENT.md)
 
 A modern, web-based Maya Outliner built with **AuroraView**, **Vue 3**, and **TypeScript**. This example demonstrates how to create high-performance DCC tools with modern web technologies embedded directly in Maya.
 
@@ -67,7 +67,7 @@ A modern, web-based Maya Outliner built with **AuroraView**, **Vue 3**, and **Ty
    main()
    ```
 
-📖 **[Full Installation Guide](./INSTALLATION.md)** - Detailed installation instructions for all platforms
+📖 **[Full Installation Guide](./docs/INSTALLATION.md)** - Detailed installation instructions for all platforms
 
 ### Development Installation
 
