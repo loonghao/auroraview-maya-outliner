@@ -1,0 +1,379 @@
+{
+  "status": "passed",
+  "level": "standalone-maya-public-contract-consumer",
+  "host": "Maya",
+  "maya_version": "2026",
+  "python": "3.11.9 (tags/v3.11.9-dirty:de54cf5be37, Oct 18 2024, 09:47:19) [MSC v.1938 64 bit (AMD64)]",
+  "pid": 73008,
+  "main_thread": 137128,
+  "artifact": {
+    "wheel_url": "https://github.com/try-auroraview/auroraview/releases/download/auroraview-dcc-mcp-v0.1.0-preview.1/auroraview_dcc_mcp-0.1.0-py3-none-any.whl",
+    "wheel_sha256": "450b74fd7c11c9247f076b456197a4c5b299c9edb34f851fda5ccc5cf1bf3558",
+    "core_version": "0.20.41"
+  },
+  "contract_version": "0.1.0",
+  "core_version": "0.20.41",
+  "dependencies": {
+    "attrs": "26.1.0",
+    "auroraview-dcc-mcp": "0.1.0",
+    "dcc-mcp-core": "0.20.41",
+    "dcc-mcp-server": "0.20.42",
+    "jsonschema": "4.26.0",
+    "jsonschema-specifications": "2025.9.1",
+    "referencing": "0.37.0",
+    "rpds-py": "2026.9.1",
+    "typing_extensions": "4.16.0"
+  },
+  "imports": {
+    "contract": "isolated-runtime/auroraview_dcc_mcp/__init__.py",
+    "core": "isolated-runtime/dcc_mcp_core/__init__.py"
+  },
+  "tools": {
+    "scene.snapshot": "maya-outliner__scene_snapshot",
+    "scene.rename": "maya-outliner__scene_rename"
+  },
+  "registered_callbacks": 10,
+  "discovery_pages": [
+    {
+      "tool_count": 32,
+      "has_next_page": true
+    },
+    {
+      "tool_count": 10,
+      "has_next_page": false
+    }
+  ],
+  "checks": [
+    "public-wheel-hash",
+    "isolated-imports",
+    "http-initialize",
+    "tools-list",
+    "http-rename",
+    "host-scene-readback",
+    "main-thread-dispatch",
+    "undo-readback",
+    "binding-unload",
+    "stale-token-refused",
+    "borrowed-server-preserved",
+    "callback-cleanup",
+    "endpoint-and-registry-cleanup"
+  ],
+  "before": {
+    "hierarchy": [
+      {
+        "name": "persp",
+        "path": "|persp",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "perspShape",
+            "path": "|persp|perspShape",
+            "parent": "|persp",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "top",
+        "path": "|top",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "topShape",
+            "path": "|top|topShape",
+            "parent": "|top",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "front",
+        "path": "|front",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "frontShape",
+            "path": "|front|frontShape",
+            "parent": "|front",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "side",
+        "path": "|side",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "sideShape",
+            "path": "|side|sideShape",
+            "parent": "|side",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "av_contract_root",
+        "path": "|av_contract_root",
+        "parent": null,
+        "type": "transform",
+        "visible": true,
+        "selected": false,
+        "children": [
+          {
+            "name": "before",
+            "path": "|av_contract_root|before",
+            "parent": "|av_contract_root",
+            "type": "group",
+            "visible": true,
+            "selected": true,
+            "children": []
+          }
+        ]
+      }
+    ],
+    "selection": [
+      "|av_contract_root|before"
+    ]
+  },
+  "after": {
+    "result": {
+      "ok": true,
+      "node": "after"
+    },
+    "scene": {
+      "hierarchy": [
+        {
+          "name": "persp",
+          "path": "|persp",
+          "parent": null,
+          "type": "transform",
+          "visible": false,
+          "selected": false,
+          "children": [
+            {
+              "name": "perspShape",
+              "path": "|persp|perspShape",
+              "parent": "|persp",
+              "type": "camera",
+              "visible": false,
+              "selected": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "top",
+          "path": "|top",
+          "parent": null,
+          "type": "transform",
+          "visible": false,
+          "selected": false,
+          "children": [
+            {
+              "name": "topShape",
+              "path": "|top|topShape",
+              "parent": "|top",
+              "type": "camera",
+              "visible": false,
+              "selected": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "front",
+          "path": "|front",
+          "parent": null,
+          "type": "transform",
+          "visible": false,
+          "selected": false,
+          "children": [
+            {
+              "name": "frontShape",
+              "path": "|front|frontShape",
+              "parent": "|front",
+              "type": "camera",
+              "visible": false,
+              "selected": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "side",
+          "path": "|side",
+          "parent": null,
+          "type": "transform",
+          "visible": false,
+          "selected": false,
+          "children": [
+            {
+              "name": "sideShape",
+              "path": "|side|sideShape",
+              "parent": "|side",
+              "type": "camera",
+              "visible": false,
+              "selected": false,
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "av_contract_root",
+          "path": "|av_contract_root",
+          "parent": null,
+          "type": "transform",
+          "visible": true,
+          "selected": false,
+          "children": [
+            {
+              "name": "after",
+              "path": "|av_contract_root|after",
+              "parent": "|av_contract_root",
+              "type": "group",
+              "visible": true,
+              "selected": true,
+              "children": []
+            }
+          ]
+        }
+      ],
+      "selection": [
+        "|av_contract_root|after"
+      ]
+    }
+  },
+  "undo": {
+    "hierarchy": [
+      {
+        "name": "persp",
+        "path": "|persp",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "perspShape",
+            "path": "|persp|perspShape",
+            "parent": "|persp",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "top",
+        "path": "|top",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "topShape",
+            "path": "|top|topShape",
+            "parent": "|top",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "front",
+        "path": "|front",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "frontShape",
+            "path": "|front|frontShape",
+            "parent": "|front",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "side",
+        "path": "|side",
+        "parent": null,
+        "type": "transform",
+        "visible": false,
+        "selected": false,
+        "children": [
+          {
+            "name": "sideShape",
+            "path": "|side|sideShape",
+            "parent": "|side",
+            "type": "camera",
+            "visible": false,
+            "selected": false,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "av_contract_root",
+        "path": "|av_contract_root",
+        "parent": null,
+        "type": "transform",
+        "visible": true,
+        "selected": false,
+        "children": [
+          {
+            "name": "before",
+            "path": "|av_contract_root|before",
+            "parent": "|av_contract_root",
+            "type": "group",
+            "visible": true,
+            "selected": true,
+            "children": []
+          }
+        ]
+      }
+    ],
+    "selection": [
+      "|av_contract_root|before"
+    ]
+  },
+  "interactive_webview": "not-tested",
+  "docking": "not-tested",
+  "imports_from_isolated_target": true,
+  "transport": "Core HTTP/MCP on an ephemeral loopback port",
+  "consumer_repository": "https://github.com/try-auroraview/auroraview-maya-outliner",
+  "gate_script": "scripts/maya_contract_acceptance.py"
+}

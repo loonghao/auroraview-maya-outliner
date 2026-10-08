@@ -29,6 +29,17 @@ maya-smoke mayapy:
 maya-runtime mayapy target:
     vx uv pip install --python "{{mayapy}}" --target "{{target}}" auroraview qtpy
 
+# Public wheel only: verify SHA256 before installing into an empty directory.
+maya-contract-runtime mayapy target wheel_url sha256:
+    vx uv run --no-project --python 3.11 scripts/prepare_maya_contract.py "{{mayapy}}" "{{target}}" "{{wheel_url}}" "{{sha256}}"
+
+maya-contract mayapy runtime report=".build/maya-contract-acceptance.json":
+    vx uv run --no-project --python 3.11 scripts/run_maya_contract.py "{{mayapy}}" "{{runtime}}" "{{report}}"
+
+# The supplied wheel may be local during development; this is not a host gate.
+test-contracts wheel:
+    vx uv run --no-project --python 3.11 --with pytest --with "{{wheel}}" pytest -c pytest.ini tests/test_tools.py -q
+
 verify-package archive="dist/maya-outliner-0.1.0-test.zip":
     vx uv run --no-project --python 3.11 scripts/verify_package.py "{{archive}}"
 
