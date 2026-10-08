@@ -10,6 +10,7 @@ import pytest
 from scripts import prepare_maya_contract, run_maya_contract
 from scripts.contract_runtime import CORE_VERSION, RECEIPT, inside, verify_runtime, wheel_name
 from scripts.maya_contract_acceptance import result_value
+from scripts import maya_contract_acceptance
 
 URL = "https://github.com/try-auroraview/auroraview/releases/download/preview/auroraview_dcc_mcp-0.1.0-py3-none-any.whl"
 DATA = b"verified wheel bytes"
@@ -94,3 +95,26 @@ def test_import_path_check_does_not_accept_a_similar_sibling(tmp_path):
 def test_mcp_error_envelope_is_never_accepted_as_success(response):
     with pytest.raises(AssertionError):
         result_value(response)
+
+
+def test_tool_discovery_consumes_all_pages(monkeypatch):
+    pages = Mock(side_effect=[
+        {"result": {"tools": [{"name": "first"}], "nextCursor": "next"}},
+        {"result": {"tools": [{"name": "last"}]}},
+    ])
+    monkeypatch.setattr(maya_contract_acceptance, "rpc", pages)
+    receipts = []
+    assert maya_contract_acceptance.list_tools("url", "pump", receipts) == [{"name": "first"}, {"name": "last"}]
+    assert pages.call_args.args[-1] == {"cursor": "next"}
+    assert receipts == [{"tool_count": 1, "has_next_page": True}, {"tool_count": 1, "has_next_page": False}]
+
+
+def test_failed_gate_preserves_json_receipt(tmp_path, monkeypatch):
+    report = tmp_path / "failed.json"
+    monkeypatch.setattr(maya_contract_acceptance.sys, "argv", ["gate", "--runtime", "runtime", "--report", str(report)])
+    monkeypatch.setattr(maya_contract_acceptance, "run_gate", Mock(side_effect=RuntimeError("host failed")))
+    with pytest.raises(RuntimeError, match="host failed"):
+        maya_contract_acceptance.main()
+    receipt = json.loads(report.read_text(encoding="utf-8"))
+    assert receipt["status"] == "failed"
+    assert "host failed" in receipt["traceback"]

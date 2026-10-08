@@ -10,6 +10,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from pathlib import Path
@@ -51,6 +52,23 @@ def result_value(response):
     if "structuredContent" in result:
         return result["structuredContent"]
     return json.loads(result["content"][0]["text"])
+
+
+def list_tools(url, pump, pages=None):
+    tools, seen = [], set()
+    cursor = None
+    while True:
+        response = rpc(url, pump, "tools/list", {"cursor": cursor} if cursor else {})
+        assert "error" not in response, response
+        result = response["result"]
+        tools.extend(result["tools"])
+        cursor = result.get("nextCursor")
+        if pages is not None:
+            pages.append({"tool_count": len(result["tools"]), "has_next_page": bool(cursor)})
+        if not cursor:
+            return tools
+        assert cursor not in seen, "Core repeated a tools/list cursor"
+        seen.add(cursor)
 
 
 def paths(snapshot):
@@ -146,6 +164,7 @@ def run_gate(runtime):
         binding = owner.attach(server)
         tool_names = dict(binding.method_names)
         skill = server.get_skill(binding.skill_name)
+        assert skill.dcc == "maya"
         script = Path(skill.tools[0].source_file)
         spec = importlib.util.spec_from_file_location("stale_maya_contract", str(script))
         stale = importlib.util.module_from_spec(spec)
@@ -163,8 +182,12 @@ def run_gate(runtime):
             "clientInfo": {"name": "maya-outliner-consumer", "version": "1.0.0"},
         })
         assert initialized["result"]["serverInfo"]
-        listed = rpc(url, pump, "tools/list")["result"]["tools"]
-        assert set(tool_names.values()).issubset({tool["name"] for tool in listed})
+        discovery_pages = []
+        listed = list_tools(url, pump, pages=discovery_pages)
+        assert set(tool_names.values()).issubset({tool["name"] for tool in listed}), {
+            "expected": tool_names, "actual": [tool["name"] for tool in listed],
+            "skill_loaded": server.is_skill_loaded(binding.skill_name),
+        }
 
         def call(method, params=None):
             return result_value(rpc(url, pump, "tools/call", {
@@ -192,7 +215,7 @@ def run_gate(runtime):
             pass
         else:
             raise AssertionError("Unloaded tool token was still callable")
-        listed_after = rpc(url, pump, "tools/list")["result"]["tools"]
+        listed_after = list_tools(url, pump)
         assert not set(tool_names.values()).intersection(tool["name"] for tool in listed_after)
         assert server.is_running
         assert session.call("scene.snapshot") == restored
@@ -218,8 +241,10 @@ def run_gate(runtime):
             "python": sys.version, "pid": os.getpid(), "main_thread": main_thread,
             "artifact": receipt, "contract_version": importlib.metadata.version("auroraview-dcc-mcp"),
             "core_version": CORE_VERSION,
+            "dependencies": {dist.metadata["Name"]: dist.version for dist in importlib.metadata.distributions(path=[str(runtime)])},
             "imports": {"contract": auroraview_dcc_mcp.__file__, "core": dcc_mcp_core.__file__},
             "mcp_url": url, "tools": tool_names, "registered_callbacks": callback_count,
+            "discovery_pages": discovery_pages,
             "checks": ["public-wheel-hash", "isolated-imports", "http-initialize", "tools-list",
                        "http-rename", "host-scene-readback", "main-thread-dispatch", "undo-readback",
                        "binding-unload", "stale-token-refused", "borrowed-server-preserved",
@@ -234,11 +259,17 @@ def main():
     parser.add_argument("--runtime", required=True)
     parser.add_argument("--report", required=True)
     args = parser.parse_args()
-    result = run_gate(args.runtime)
     report = Path(args.report)
     report.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        result = run_gate(args.runtime)
+    except BaseException:
+        report.write_text(json.dumps({"status": "failed", "traceback": traceback.format_exc()}, indent=2) + "\n", encoding="utf-8")
+        raise
     report.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(result, indent=2))
+    print(json.dumps({key: result[key] for key in (
+        "status", "maya_version", "contract_version", "core_version", "checks", "discovery_pages",
+    )}, indent=2))
 
 
 if __name__ == "__main__":

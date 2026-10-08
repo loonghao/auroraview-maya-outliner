@@ -21,6 +21,8 @@ jobs:
           tools: node@22 uv just
       - run: vx just install
       - run: vx just check
+      - name: Shared factory against verified public preview wheel
+        run: vx just test-contracts "https://github.com/try-auroraview/auroraview/releases/download/auroraview-dcc-mcp-v0.1.0-preview.1/auroraview_dcc_mcp-0.1.0-py3-none-any.whl#sha256=450b74fd7c11c9247f076b456197a4c5b299c9edb34f851fda5ccc5cf1bf3558"
       - run: vx just package 0.1.0-test
       - name: Verify source archive
         run: vx just verify-package

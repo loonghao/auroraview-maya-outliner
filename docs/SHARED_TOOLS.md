@@ -45,11 +45,13 @@ The gate creates its own disposable scene and Core service in an isolated
 downloaded from a public HTTPS URL and verified against a supplied release
 SHA256. Core is pinned to `0.20.41`.
 
-After the preview artifact is published, supply its **direct wheel URL** and
-**64-character SHA256**, taken from the published `SHA256SUMS`:
+The [public preview](https://github.com/try-auroraview/auroraview/releases/tag/auroraview-dcc-mcp-v0.1.0-preview.1)
+has a direct wheel URL and SHA256 recorded in its published `SHA256SUMS`:
 
 ```powershell
-vx just maya-contract-runtime "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe" ".maya-contract-runtime" "<public-wheel-url>" "<release-sha256>"
+$wheelUrl = "https://github.com/try-auroraview/auroraview/releases/download/auroraview-dcc-mcp-v0.1.0-preview.1/auroraview_dcc_mcp-0.1.0-py3-none-any.whl"
+$wheelSha256 = "450b74fd7c11c9247f076b456197a4c5b299c9edb34f851fda5ccc5cf1bf3558"
+vx just maya-contract-runtime "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe" ".maya-contract-runtime" "$wheelUrl" "$wheelSha256"
 vx just maya-contract "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe" ".maya-contract-runtime"
 ```
 
@@ -61,7 +63,7 @@ then starts the supplied Maya interpreter. The consumer asserts that both
 contract and Core modules come from this isolated runtime. Only the tutorial's
 business package is imported from the checkout.
 
-The gate performs actual HTTP/MCP initialize, discovery and calls. HTTP runs
+The gate performs actual HTTP/MCP initialize, complete paginated discovery and calls. HTTP runs
 on a client worker while Maya's main thread drains Core's dispatcher. A rename
 must produce the expected full DAG path and host readback; Maya Undo must
 restore the original snapshot. It then unloads the binding, refuses a stale
@@ -88,5 +90,10 @@ The second recipe tests the factory against the supplied installed wheel;
 using a local wheel here is development evidence only. The original
 `vx just maya-smoke "<mayapy>"` eight-check scene/callback gate is unchanged.
 
-Public-wheel Maya consumption has not yet been recorded. See
-[validation](VALIDATION.md) for the evidence gates.
+Public-wheel consumption passed in Maya 2026 with Python 3.11.9, contract 0.1.0
+and Core 0.20.41. The [receipt](receipts/maya-contract-preview-1.json) records two
+discovery pages (32 + 10 tools), real rename/readback/Undo, unload, stale refusal
+and cleanup. Its import paths are relative to the isolated runtime; the local
+receipt retains the full paths. This accepts the standalone scene-tool path.
+The stock Vue panel still uses `api.rename_node`; shared GUI binding, WebView
+rendering and docking remain unaccepted. See [validation](VALIDATION.md).
