@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.6](https://github.com/try-auroraview/auroraview-maya-outliner/compare/maya-outliner-v0.1.5...maya-outliner-v0.1.6) (2026-10-08)
+
+
+### Features
+
+* share Maya scene tools through explicit contracts ([#52](https://github.com/try-auroraview/auroraview-maya-outliner/issues/52)) ([bc934e7](https://github.com/try-auroraview/auroraview-maya-outliner/commit/bc934e7e454c59b8f2fd707bf686c68ef432e55d))
+
+
+### Bug Fixes
+
+* restore runnable Maya Outliner tutorial ([#50](https://github.com/try-auroraview/auroraview-maya-outliner/issues/50)) ([59439e0](https://github.com/try-auroraview/auroraview-maya-outliner/commit/59439e050ab58b37b57b6507cf3823a2458ff98c))
+
 ## [0.1.5](https://github.com/loonghao/auroraview-maya-outliner/compare/maya-outliner-v0.1.4...maya-outliner-v0.1.5) (2025-11-27)
 
 
