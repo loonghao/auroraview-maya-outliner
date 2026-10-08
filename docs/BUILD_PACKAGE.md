@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # Building Maya Outliner Package
 
 ## Quick Start
@@ -148,9 +150,8 @@ After building and testing the package:
    ```
 
 2. Upload to GitHub Releases:
-   - Go to https://github.com/loonghao/auroraview-maya-outliner/releases
+   - Go to https://github.com/try-auroraview/auroraview-maya-outliner/releases
    - Create new release
    - Upload `dist/maya-outliner-0.1.0.zip`
 
 3. Update documentation with installation instructions
-

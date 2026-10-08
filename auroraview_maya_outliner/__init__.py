@@ -1,10 +1,4 @@
-"""
-Maya Integration Package for AuroraView Outliner
-
-This package provides Maya-specific integration code.
-Renamed from 'maya' to 'maya_integration' to avoid namespace conflicts
-with Maya's core 'maya' package.
-"""
+"""Runnable Maya Outliner tutorial, originally created by Long Hao."""
 
 from .maya_outliner import MayaOutliner, main
 

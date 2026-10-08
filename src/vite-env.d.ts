@@ -6,6 +6,4 @@ declare module '*.vue' {
   export default component
 }
 
-// AuroraView uses CustomEvent for IPC
-// No need for window.auroraview - use window.dispatchEvent() and window.addEventListener()
-
+// The AuroraView bridge type is declared in composables/useMayaIPC.ts.

@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # Environment Configuration Implementation Summary
 
 ## Overview
@@ -220,4 +222,3 @@ Both tests passed successfully ✅
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - Complete deployment guide
 - [maya_integration/config.py](./maya_integration/config.py) - Configuration module
 - [maya_integration/example_usage.py](./maya_integration/example_usage.py) - Usage examples
-

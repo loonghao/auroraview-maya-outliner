@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # AuroraView Maya Outliner - Deployment Guide
 
 [English](#english) | [中文](#中文)
@@ -331,4 +333,3 @@ npm run dev
 # 检查端口 5173 是否可用
 netstat -ano | findstr :5173
 ```
-

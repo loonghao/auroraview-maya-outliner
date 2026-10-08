@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # 设计：类型安全的事件系统
 
 ## 问题背景
@@ -477,4 +479,3 @@ onMayaEvent('selection_changed', (data: unknown) => {
 3. ✅ **自动化文档** - 类型定义即文档
 4. ✅ **向后兼容** - 智能适配器处理旧格式
 5. ✅ **易于维护** - 单一数据源，修改一处即可
-

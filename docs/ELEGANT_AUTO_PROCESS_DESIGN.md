@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # 优雅的自动事件处理设计
 
 ## 设计理念
@@ -184,4 +186,3 @@ webview._auto_process_events = my_custom_handler
 | 技术债 | ⚠️ 容易积累 | ✅ 清晰的设计 |
 
 **结论：** 新设计更优雅、更易维护、更符合 OOP 原则，适合积极开发阶段的项目。
-

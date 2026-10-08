@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # Installation Guide
 
 [English](#english) | [中文](#中文)
@@ -11,7 +13,7 @@
 #### For End Users
 
 1. **Download the latest release**
-   - Go to [Releases](https://github.com/loonghao/auroraview-maya-outliner/releases)
+   - Go to [Releases](https://github.com/try-auroraview/auroraview-maya-outliner/releases)
    - Download `maya-outliner-{version}.zip`
 
 2. **Extract the archive**
@@ -51,7 +53,7 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/loonghao/auroraview-maya-outliner.git
+   git clone https://github.com/try-auroraview/auroraview-maya-outliner.git
    cd auroraview-maya-outliner
    ```
 
@@ -174,7 +176,7 @@ chmod +x install.sh
 #### 普通用户
 
 1. **下载最新版本**
-   - 访问 [Releases](https://github.com/loonghao/auroraview-maya-outliner/releases)
+   - 访问 [Releases](https://github.com/try-auroraview/auroraview-maya-outliner/releases)
    - 下载 `maya-outliner-{version}.zip`
 
 2. **解压文件**
@@ -214,7 +216,7 @@ chmod +x install.sh
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/loonghao/auroraview-maya-outliner.git
+   git clone https://github.com/try-auroraview/auroraview-maya-outliner.git
    cd auroraview-maya-outliner
    ```
 
@@ -327,4 +329,3 @@ chmod +x install.sh
 ```bash
 chmod +x install.sh
 ```
-

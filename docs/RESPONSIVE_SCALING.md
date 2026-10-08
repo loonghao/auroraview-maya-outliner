@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # 响应式自动缩放功能
 
 ## 功能概述
@@ -187,4 +189,3 @@ A: 设置 `minScale: 1` 和 `maxScale: 1` 即可固定为 100% 缩放。
 - [MDN: CSS transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform)
 - [CSS Container Queries](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Container_Queries)
 - [Responsive Design Best Practices 2025](https://web.dev/responsive-web-design-basics/)
-

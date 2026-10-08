@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # 总结：类型安全的事件系统解决方案
 
 ## 问题回顾
@@ -249,4 +251,3 @@ self.webview.emit("scene_updated", hierarchy)
 - 长期：自动化（运行时验证）
 
 每一步都是可选的，不会强制要求立即完成所有改进。
-

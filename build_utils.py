@@ -5,37 +5,11 @@ These are extracted from noxfile.py to enable testing without nox dependency.
 """
 
 from pathlib import Path
+from build_maya_package import create_mod_file
 
 
 # Shelf configuration - must match build_maya_package.py
 SHELF_NAME = "auroraview"
-
-
-def create_mod_file(package_dir: Path, version: str) -> None:
-    """Create Maya module (.mod) file.
-
-    The PYTHONPATH includes both the package root (for auroraview_maya_outliner)
-    and the vendor directory (for third-party dependencies like auroraview).
-    """
-    mod_file = package_dir / "maya-outliner.mod"
-    mod_file.write_text(
-        f"""+ MAYAVERSION:2022 maya-outliner {version} ./
-scripts: scripts
-PYTHONPATH +:= .
-PYTHONPATH +:= vendor
-
-+ MAYAVERSION:2024 maya-outliner {version} ./
-scripts: scripts
-PYTHONPATH +:= .
-PYTHONPATH +:= vendor
-
-+ MAYAVERSION:2025 maya-outliner {version} ./
-scripts: scripts
-PYTHONPATH +:= .
-PYTHONPATH +:= vendor
-""",
-        encoding="utf-8",
-    )
 
 
 def create_production_usersetup(package_dir: Path) -> None:
@@ -246,4 +220,3 @@ pause
 """,
         encoding="utf-8",
     )
-

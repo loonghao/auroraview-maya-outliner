@@ -1,469 +1,157 @@
-# Maya Outliner - AuroraView Example
+# AuroraView Maya Outliner
 
-[![Release](https://img.shields.io/github/v/release/loonghao/auroraview-maya-outliner?logo=github)](https://github.com/loonghao/auroraview-maya-outliner/releases)
-[![Downloads](https://img.shields.io/github/downloads/loonghao/auroraview-maya-outliner/total?logo=github)](https://github.com/loonghao/auroraview-maya-outliner/releases)
-[![Vue 3](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![AuroraView](https://img.shields.io/badge/AuroraView-Rust-orange?logo=rust&logoColor=white)](../../README.md)
+A runnable tutorial for building a scene tool with Vue inside Maya. The frontend displays the DAG; Python owns Maya commands; AuroraView carries Promise-based calls and events through an embedded QtWebView.
 
-[中文文档](./README_zh.md) | [📦 Installation](./docs/INSTALLATION.md) | [Quick Start](./QUICKSTART.md) | [Deployment Guide](./docs/DEPLOYMENT.md) | [Local Development](./LOCAL_DEVELOPMENT.md)
+[中文教程](README_zh.md) · [AuroraView](https://github.com/try-auroraview/auroraview) · [Organization website](https://try-auroraview.github.io/) · [Validation](docs/VALIDATION.md) · [Origin and rights](docs/PROVENANCE.md)
 
-A modern, web-based Maya Outliner built with **AuroraView**, **Vue 3**, and **TypeScript**. This example demonstrates how to create high-performance DCC tools with modern web technologies embedded directly in Maya.
+This is the original **Maya Outliner Example**, moved from Long Hao's repository with its history intact. It is separate from the [Maya host adapter](https://github.com/try-auroraview/auroraview-maya).
 
-## ✨ Features
+![Original Maya Outliner preview](docs/preview.png)
 
-- 🌳 **Hierarchical Scene Tree** - Display Maya's scene hierarchy with expandable nodes
-- 🎯 **Real-time Selection Sync** - Bidirectional selection synchronization between Maya and UI
-- 👁️ **Visibility Toggle** - Show/hide objects directly from the outliner
-- 🔍 **Search & Filter** - Quickly find nodes by name
-- ⚡ **High Performance** - Handle 10,000+ nodes smoothly with AuroraView's optimized IPC
-- 🎨 **Modern UI** - Clean, dark-themed interface built with Vue 3
-- 🔄 **Live Updates** - Automatic UI updates when scene changes
+*Preview retained from the original project. See the validation record for what has been checked after migration.*
 
-## 🖼️ Preview
+## What you will learn
 
-![AuroraView Maya Outliner Preview](./docs/preview.png)
+- Embed a Vue interface in Maya's existing Qt event loop.
+- Query full DAG paths, including objects with identical leaf names.
+- Select one or several objects, clear selection, and synchronize Maya selections back into Vue.
+- Toggle visibility, rename, duplicate, group, delete and reparent through explicit Python methods.
+- Load a production frontend without a Vite server, then remove callbacks and dispose of the WebView on close.
 
-## 🏗️ Architecture
+## Prerequisites
 
-```
-┌─────────────────────────────────────────┐
-│           Maya (Python)                 │
-│  ┌───────────────────────────────────┐  │
-│  │   maya_outliner.py                │  │
-│  │   - Scene hierarchy queries       │  │
-│  │   - Selection management          │  │
-│  │   - Visibility control            │  │
-│  │   - Maya callbacks                │  │
-│  └───────────┬───────────────────────┘  │
-│              │ AuroraView IPC            │
-│              │ (Thread-based, <1μs)      │
-│  ┌───────────▼───────────────────────┐  │
-│  │   WebView (Embedded)              │  │
-│  │  ┌─────────────────────────────┐  │  │
-│  │  │  Vue 3 Frontend             │  │  │
-│  │  │  - OutlinerTree.vue         │  │  │
-│  │  │  - TreeNode.vue             │  │  │
-│  │  │  - useMayaIPC composable    │  │  │
-│  │  └─────────────────────────────┘  │  │
-│  └───────────────────────────────────┘  │
-└─────────────────────────────────────────┘
+The maintained tutorial path is **Windows x64, Maya with Python 3, its bundled PySide binding, and WebView2 Runtime**. Maya 2022–2024 use PySide2; Maya 2025–2026 use PySide6. These are code paths, not a claim of interactive acceptance for every version. See [validation](docs/VALIDATION.md).
+
+Use [vx](https://github.com/loonghao/vx) for Node.js, uv and just. The demo installs `auroraview` and `qtpy` into a local directory; it uses Maya's Qt binding rather than installing another one.
+
+## 1. Build the frontend
+
+```powershell
+vx git clone https://github.com/try-auroraview/auroraview-maya-outliner.git
+cd auroraview-maya-outliner
+vx just install
+vx just build
 ```
 
-## 📦 Installation
+The build runs TypeScript checks and creates `dist/index.html` plus its assets.
 
-### Quick Install (For End Users)
+## 2. Prepare Maya's runtime
 
-**Download the latest release and run the installer:**
+Change the interpreter path to your installed Maya version:
 
-1. Go to [Releases](https://github.com/loonghao/auroraview-maya-outliner/releases)
-2. Download `maya-outliner-{version}.zip`
-3. Extract and run `install.bat` (Windows) or `install.sh` (Linux/macOS)
-4. Restart Maya
-5. Run in Maya Script Editor:
-   ```python
-   from maya_integration import main
-   main()
-   ```
-
-📖 **[Full Installation Guide](./docs/INSTALLATION.md)** - Detailed installation instructions for all platforms
-
-### Development Installation
-
-For developers who want to contribute or customize:
-
-#### Prerequisites
-
-- **Maya 2020+** (with Python 3.7+)
-- **Node.js 18+** and npm
-- **AuroraView** installed in Maya's Python environment
-
-#### Install AuroraView
-
-**Option A: Qt Backend (Recommended)**
-```bash
-# Install with Qt support for better Maya integration
-mayapy -m pip install auroraview[qt]
-```
-- ✅ Non-blocking by default
-- ✅ Better integration with Maya's UI
-- ✅ Seamless window management
-
-**Option B: Native Backend (Fallback)**
-```bash
-# Install without Qt dependencies
-mayapy -m pip install auroraview
-```
-- ✅ Works without Qt
-- ✅ Uses `show_async()` for non-blocking
-- ⚠️ Standalone window
-
-**Local Development:**
-```bash
-cd /path/to/dcc_webview
-mayapy -m pip install -e python/[qt]  # With Qt
-# or
-mayapy -m pip install -e python/      # Without Qt
+```powershell
+vx just maya-runtime "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe" ".maya-runtime"
 ```
 
-### Install Frontend Dependencies
+This installs into the repository's `.maya-runtime` directory. It does not edit Maya's `userSetup.py` or replace the PySide shipped with Maya. Restart Maya after changing native wheel versions.
 
-```bash
-cd examples/maya-outliner
-npm install
-```
+## 3. Open inside Maya
 
-## 🚀 Usage
-
-### Quick Start with Justfile (Recommended)
-
-This project includes a `justfile` for easy Maya setup and launch.
-
-**Prerequisites:**
-- Install [just](https://github.com/casey/just) command runner
-- Install AuroraView: `mayapy -m pip install auroraview`
-- Install frontend dependencies: `npm install`
-
-**Launch Maya with AuroraView Outliner:**
-
-```bash
-# For Maya 2022
-just maya-2022
-
-# For Maya 2024
-just maya-2024
-
-# For Maya 2025
-just maya-2025
-```
-
-This will:
-1. ✅ Copy `userSetup.py` to Maya's scripts folder with correct paths
-2. ✅ Launch Maya
-3. ✅ Create "AuroraView" shelf with "Outliner" button on startup
-
-**Check your setup:**
-```bash
-just info
-```
-
-This shows:
-- Project paths
-- Maya installation status
-- UserSetup installation status
-
-**Local Development Mode:**
-
-If you're developing AuroraView locally, use the `-local` suffix:
-
-```bash
-just maya-2024-local  # Use local AuroraView from custom path
-```
-
-See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) for details.
-
-**Other useful commands:**
-```bash
-just install          # Install npm dependencies
-just dev              # Start Vite dev server
-just build            # Build for production
-just clean-maya 2024  # Remove userSetup.py from Maya 2024
-just clean-all-maya   # Remove userSetup.py from all Maya versions
-```
-
-📖 See [QUICKSTART.md](./QUICKSTART.md) for more details
-
-### Quick Debug Workflow (For Testing)
-
-**Using Just command:**
-```bash
-just maya-debug
-```
-
-This will:
-1. Kill all Maya processes
-2. Rebuild Rust core
-3. Set PYTHONPATH
-4. Launch Maya 2024
-
-**Using batch script (Recommended):**
-```bash
-cd examples/maya-outliner
-launch_maya_debug.bat
-```
-
-This script will:
-- Kill all Maya processes
-- Rebuild Rust core
-- Set PYTHONPATH
-- Launch Maya with AuroraView available
-
-**Verify PYTHONPATH in Maya:**
-After Maya starts, run this in Script Editor:
-```python
-exec(open(r'C:\path\to\examples\maya-outliner\test_pythonpath.py').read())
-```
-
-You should see:
-```
-✅ SUCCESS: auroraview imported successfully!
-✅ SUCCESS: WebView class imported!
-```
-
-**Auto-load on Maya startup:**
-Copy `userSetup.py` to Maya's scripts folder:
-```bash
-# Windows
-copy userSetup.py "C:\Users\<username>\Documents\maya\2024\scripts\"
-```
-
-Then restart Maya - you'll see an "Outliner" button on the AuroraView shelf!
-
-### Development Mode
-
-1. **Start the Vite dev server:**
-
-```bash
-npm run dev
-```
-
-This will start the development server at `http://localhost:5173` with hot-reload.
-
-2. **Run in Maya:**
-
-Open Maya's Script Editor and run:
+In Maya's Script Editor, choose **Python** and run:
 
 ```python
 import sys
-sys.path.append(r"C:\path\to\dcc_webview\examples\maya-outliner")
+from pathlib import Path
 
-from maya_integration import maya_outliner
-maya_outliner.main()
+repo = Path(r"C:/path/to/auroraview-maya-outliner")
+sys.path.insert(0, str(repo))
+sys.path.insert(0, str(repo / ".maya-runtime"))
+
+from auroraview_maya_outliner import main
+outliner = main(use_local=True)
 ```
 
-The outliner window will open and connect to the Vite dev server automatically.
+`use_local=True` requires a built frontend and reports a missing build clearly. The widget serves the files through AuroraView's asset protocol; no HTTP server is needed. Calling `main()` again raises the existing window.
 
-### Production Mode
+For hot reload, run `vx just dev` in a separate terminal, then use `main(url="http://127.0.0.1:5173")` in a fresh outliner instance.
 
-1. **Build the frontend:**
+## 4. Try a small scene
 
-```bash
-npm run build
-```
-
-2. **Serve the built files:**
-
-```bash
-npm run preview
-```
-
-3. **Run in Maya** (same as development mode)
-
-## 🎯 Features Demonstration
-
-## 🪟 Windows WebView2 Backend (Experimental)
-
-AuroraView provides a Windows-native WebView2 backend designed for DCC hosts (Qt event loop). Build the core with the feature enabled:
-
-```bash
-# Build wheel with WebView2 (Windows only)
-# Example with maturin (inside repo root)
-set RUSTFLAGS=
-set CARGO_BUILD_TARGET=
-python -m pip uninstall -y auroraview || echo .
-maturin develop --release --features win-webview2
-```
-
-Then inside Maya's Script Editor (Python):
+The following adds a group and two objects to the current scene; it does not reset your scene:
 
 ```python
-import sys
-sys.path.append(r"C:\path\to\dcc_webview\examples\maya-outliner")
-from maya_integration.launch_webview2 import launch
-h = launch("http://localhost:5173", 1000, 700)
-print("WebView2 handle:", h)
+import maya.cmds as cmds
+
+root = cmds.group(empty=True, name="av_demo")
+cube = cmds.polyCube(name="av_cube")[0]
+sphere = cmds.polySphere(name="av_sphere")[0]
+cmds.parent([cube, sphere], root)
+cmds.select(cube)
 ```
 
-If you see an error about the feature not enabled, rebuild AuroraView with `--features win-webview2`.
+Select a row in the web outliner and confirm Maya's selection changes. Select the sphere in Maya and confirm the row changes. Ctrl-click selects several rows; Ctrl-click the last selected row clears selection. Use the eye control to hide/show an object. Double-click a label to rename it. Try drag/drop parenting and the context menu on this disposable sample.
 
+## How the bridge works
 
+```text
+Vue component -> auroraview.call("api.select_node", params)
+              -> SceneAPI.select_node() -> maya.cmds on Maya's main thread
 
-
-### Scene Hierarchy
-
-The outliner displays your Maya scene as a hierarchical tree:
-
-- **Transform nodes** 📁
-- **Mesh nodes** 🔷
-- **Camera nodes** 📷
-- **Light nodes** 💡
-- **Joint nodes** 🦴
-- **Locator nodes** 📍
-
-### Selection Synchronization
-
-- **Click a node** in the outliner → Maya selects it
-- **Select in Maya** → Outliner highlights it
-- **Real-time updates** with <1ms latency
-
-### Visibility Control
-
-- Click the 👁️ icon to toggle visibility
-- Changes reflect immediately in Maya viewport
-- Supports hierarchical visibility
-
-### Search & Filter
-
-- Type in the search box to filter nodes
-- Matches node names (case-insensitive)
-- Shows matching nodes and their parents
-
-## 📊 Performance Benchmarks
-
-Tested on Windows 10, Intel i7-9700K, 32GB RAM:
-
-| Nodes | Load Time | Selection Latency | Memory Usage |
-|-------|-----------|-------------------|--------------|
-| 100   | <10ms     | <1ms              | ~15MB        |
-| 1,000 | ~50ms     | <1ms              | ~25MB        |
-| 10,000| ~300ms    | <2ms              | ~80MB        |
-
-**Why so fast?**
-
-- **Thread-based IPC** instead of HTTP/WebSocket
-- **Crossbeam channels** for lock-free communication
-- **Message batching** (16ms window, ~60 FPS)
-- **Efficient Vue 3 rendering** with virtual DOM
-- **EventTimer** for automatic event processing at 60 FPS
-
-## 🔄 Event Processing
-
-This example uses AuroraView's modern Qt integration instead of manually creating an `EventTimer`.
-
-- The `QtWebView` widget embeds the core WebView backend.
-- The `AuroraView` facade keeps the IPC/event loop alive for you.
-- You do not need to create or manage an `EventTimer` in your own code for this outliner.
-
-If you are interested in the lower-level `WebView` + `EventTimer` APIs, please refer to the main AuroraView README.
-
-## 🛠️ Development
-
-### Project Structure
-
-```
-maya-outliner/
-├── src/
-│   ├── components/
-│   │   ├── OutlinerTree.vue    # Main tree component
-│   │   └── TreeNode.vue         # Individual node component
-│   ├── composables/
-│   │   └── useMayaIPC.ts        # IPC communication layer
-│   ├── types.ts                 # TypeScript type definitions
-│   ├── App.vue                  # Root component
-│   ├── main.ts                  # Entry point
-│   └── style.css                # Global styles
-├── maya_integration/
-│   ├── maya_outliner.py         # Maya backend (AuroraView + QtWebView)
-│   └── __init__.py
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-└── README.md
+Maya SelectionChanged callback -> QtWebView.emit("selection_changed", payload)
+                              -> auroraview.on(...) -> Vue state
 ```
 
-### Adding New Features
+The Python side binds a small API object:
 
-**1. Add a new API method (recommended):**
-
-Backend (`maya_outliner.py`):
 ```python
-class MayaOutlinerAPI:
-    ...
-
-    def frame_node(self, node_name: str) -> dict[str, Any]:
-        """Frame a node in Maya's viewport."""
-        cmds.viewFit(node_name)
-        return {"ok": True, "message": f"Framed: {node_name}"}
+webview.bind_api(scene_api)
+# The api namespace includes get_scene_hierarchy, select_node and set_visibility.
 ```
 
-Frontend (`useMayaIPC.ts`):
+The frontend uses the same protocol for queries and mutations:
+
 ```typescript
-const frameNode = (nodeName: string) =>
-  callAPI<{ ok: boolean; message: string }>('frame_node', { node_name: nodeName })
-```
-
-Then call it from your component:
-```typescript
-await frameNode('pCube1')
-```
-
-#### Parameter encoding rules for auroraview.call / callAPI
-
-- JavaScript calls use `window.auroraview.call(method, params)` (or `callAPI` as a helper).
-- The payload is encoded using a `params` field:
-  - If you call `callAPI('refresh')` **without** a second argument, no `params` key is sent and the bound Python function is invoked with **no arguments** (use this for zero-parameter methods like `API.get_scene_hierarchy(self)`).
-  - If you pass an object (e.g. `{ node_name: 'pCube1' }`), it becomes keyword arguments on the Python side (`def frame_node(self, node_name: str)`).
-  - If you pass an array (e.g. `[x, y]`), it becomes positional arguments (`def move(self, x, y)`).
-  - If you explicitly pass `null`, Python receives a single argument `None` (this is different from omitting the parameter entirely).
-
-
-**1.1 (optional) Add a new push event from Maya:**
-
-Backend (`maya_outliner.py`):
-```python
-self.webview.emit("my_event", {"foo": "bar"})
-```
-
-Frontend (`useMayaIPC.ts`):
-```typescript
-onMayaEvent('my_event', (payload) => {
-  console.log('Received from Maya', payload)
+const nodes = await window.auroraview.call('api.get_scene_hierarchy')
+await window.auroraview.call('api.select_node', {
+  node_name: '|av_demo|av_cube',
 })
+const unsubscribe = window.auroraview.on('selection_changed', payload => {
+  // payload.nodes contains every selected full DAG path, including [].
+})
+// Call unsubscribe() when the Vue component is unmounted.
 ```
 
-**2. Add a new UI component:**
+Full DAG paths are identities; short names are labels. Ambiguous or missing nodes and Maya command failures reject the call. QtWebView owns WebView processing inside Maya's Qt event loop. Scene callbacks coalesce refreshes with a Qt timer rather than taking over the message pump.
 
-Create `src/components/MyComponent.vue` and import it in `App.vue`.
+## Shared runtime direction
 
-**3. Add new node properties:**
+AuroraView focuses on modern Web interfaces, rendering and native host docking. The planned thin integration will reuse DCC-MCP Core's existing server/MCP transport, tool and Skill registration, host execution bridge, thread scheduling and lifecycle. DCC-MCP keeps those responsibilities; it does not become a frontend framework.
 
-Update `MayaNode` interface in `src/types.ts` and modify `get_scene_hierarchy()` in `maya_outliner.py`.
+The intended ownership rule is to attach to an existing host service when available. A panel releases its own subscriptions and tasks on close, and shuts down a service only when it owns that service. Page actions and explicitly registered agent tools should call the same host business capabilities.
 
-## 🐛 Troubleshooting
+This shared runtime integration is **planned, not delivered by this demo**. The current tutorial uses a Maya-parented Qt dialog and its own scene callbacks; native Maya docking and DCC-MCP service attachment are not implemented or certified here. It does not define a new Core API or automatically expose the interface as agent tools.
 
-### Common Issues
+## Close and verify cleanup
 
-**Blank WebView / Cannot read data:**
-- Ensure the dev server is running (npm run dev) or use a packaged build (npm run build && npm run preview)
-
-**Module not found:**
-```bash
-npm install  # Install frontend dependencies
-mayapy -m pip install auroraview  # Install AuroraView
+```python
+outliner.close()
+assert not outliner._callbacks.ids
+outliner = main(use_local=True)
 ```
 
-**Vite server not running:**
-```bash
-npm run dev  # Start development server
+Closing with the window's close button uses the same cleanup path: stop the refresh timer, unregister Maya callbacks, destroy the WebView, and release the instance registry. The Vue composable also removes its event subscriptions on unmount.
+
+## Tests and source archive
+
+```powershell
+vx just check
+vx just maya-smoke "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe"
+vx just package 0.1.0-test
 ```
 
-## 📚 Learn More
+`check` builds the frontend and runs scene/config/package contract tests outside Maya. `maya-smoke` starts a separate Maya standalone process and checks real DAG queries, duplicate names, selection, visibility and callback removal. It does not certify WebView rendering or an interactive Maya session.
 
-- [AuroraView Documentation](../../README.md)
-- [Vue 3 Documentation](https://vuejs.org/)
-- [Vite Documentation](https://vitejs.dev/)
-- [Maya Python API](https://help.autodesk.com/view/MAYAUL/2024/ENU/?guid=Maya_SDK_py_ref_index_html)
+The source demo archive in `dist/` contains the built frontend, frontend source, Python code, recipes, tests, tutorials and provenance. After extraction, use its `maya-outliner` directory as `repo` in the launch example. The included `dist/` needs rebuilding only when you change the frontend. Install the runtime separately with the included `maya-runtime` recipe as above. Older installers and development scripts remain as legacy project material; the steps above are the maintained tutorial workflow.
 
-## 📄 License
+## Troubleshooting
 
-This example is part of the AuroraView project and follows the same license.
+| Symptom | Next step |
+| --- | --- |
+| Missing `dist/index.html` | Run `vx just install` and `vx just build`. |
+| `No module named auroraview` or `qtpy` | Run the runtime recipe with the same Maya interpreter, then add `.maya-runtime` to `sys.path`. |
+| Maya main window unavailable | Run `main()` in interactive Maya after startup; mayapy has no main window. |
+| Frontend shown in a browser but no Maya data | Open it through the Maya launcher; a browser tab has no Maya bridge. |
+| Missing/ambiguous node error | Refresh after edits and use full DAG paths. |
+| Native wheel or WebView initialization failure | Check Maya's Python ABI, Windows x64 and WebView2 Runtime; capture the Script Editor traceback. |
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
-
----
-
-**Built with ❤️ using AuroraView**
-
+The project is originally by **Long Hao (loonghao)**. The source repository has no LICENSE file at the preserved migration commit; see [provenance](docs/PROVENANCE.md). AuroraView's own MIT license does not automatically license this separate demo.

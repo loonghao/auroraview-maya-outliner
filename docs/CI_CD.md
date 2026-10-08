@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # CI/CD 流程说明
 
 本项目使用 GitHub Actions 和 release-please 实现自动化的版本管理和发布流程。
@@ -279,4 +281,3 @@ git push -u origin feat/auto-shelf-button
 - [release-please 文档](https://github.com/googleapis/release-please)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [GitHub Actions 文档](https://docs.github.com/en/actions)
-

@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # 🎉 分层架构重构完成总结
 
 ## 📋 问题背景
@@ -274,4 +276,3 @@ tests/test_auto_process_events.py::TestWebViewAutoProcessEvents::test_batch_oper
 ✅ **避免技术债** - 使用标准的设计模式，代码清晰易维护  
 
 **核心原则：** 底层解决问题，上层自动受益，避免重复修改。
-
