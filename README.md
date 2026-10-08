@@ -5,7 +5,10 @@ A runnable tutorial for building a scene tool with Vue inside Maya. The frontend
 [中文教程](README_zh.md) · [AuroraView](https://github.com/try-auroraview/auroraview) · [Organization website](https://try-auroraview.github.io/) · [Validation](docs/VALIDATION.md) · [Origin and rights](docs/PROVENANCE.md)
 
 [Shared UI and agent tools](docs/SHARED_TOOLS.md) adds an explicit ToolSet factory
-and a separate public-wheel Maya standalone consumer gate.
+and a separate public-wheel Maya standalone consumer gate. `create_tools()` and
+`tools.bind()` are opt-in: the stock Vue panel still calls the legacy
+`api.rename_node` route and does not yet use the shared rename schema. Real GUI
+binding and interactive WebView behavior have not been accepted.
 
 This is the original **Maya Outliner Example**, moved from Long Hao's repository with its history intact. It is separate from the [Maya host adapter](https://github.com/try-auroraview/auroraview-maya).
 
