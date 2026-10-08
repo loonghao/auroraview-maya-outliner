@@ -30,14 +30,14 @@ class TestCreateModFile:
         create_mod_file(tmp_path, "1.0.0")
         mod_file = tmp_path / "maya-outliner.mod"
         content = mod_file.read_text()
-        assert "PYTHONPATH +:= ./" in content
+        assert "PYTHONPATH +:= ." in content
 
     def test_mod_file_contains_scripts_directive(self, tmp_path: Path) -> None:
         """Test that mod file contains scripts directive."""
         create_mod_file(tmp_path, "1.0.0")
         mod_file = tmp_path / "maya-outliner.mod"
         content = mod_file.read_text()
-        assert "scripts: ./" in content
+        assert "scripts: scripts" in content
 
     def test_mod_file_supports_maya_versions(self, tmp_path: Path) -> None:
         """Test that mod file supports Maya 2022, 2024, 2025."""
@@ -55,13 +55,13 @@ class TestCreateProductionUsersetup:
     def test_usersetup_created(self, tmp_path: Path) -> None:
         """Test that userSetup.py is created."""
         create_production_usersetup(tmp_path)
-        usersetup_file = tmp_path / "userSetup.py"
+        usersetup_file = tmp_path / "scripts" / "userSetup.py"
         assert usersetup_file.exists()
 
     def test_usersetup_no_project_root_template(self, tmp_path: Path) -> None:
         """Test that userSetup.py doesn't contain PROJECT_ROOT template."""
         create_production_usersetup(tmp_path)
-        usersetup_file = tmp_path / "userSetup.py"
+        usersetup_file = tmp_path / "scripts" / "userSetup.py"
         content = usersetup_file.read_text(encoding="utf-8")
         # Should not contain the template placeholder
         assert "{{PROJECT_ROOT}}" not in content
@@ -69,7 +69,7 @@ class TestCreateProductionUsersetup:
     def test_usersetup_imports_maya_modules(self, tmp_path: Path) -> None:
         """Test that userSetup.py imports maya modules."""
         create_production_usersetup(tmp_path)
-        usersetup_file = tmp_path / "userSetup.py"
+        usersetup_file = tmp_path / "scripts" / "userSetup.py"
         content = usersetup_file.read_text(encoding="utf-8")
         assert "import maya.utils" in content
         assert "from maya import cmds" in content
@@ -77,14 +77,14 @@ class TestCreateProductionUsersetup:
     def test_usersetup_imports_auroraview_maya_outliner(self, tmp_path: Path) -> None:
         """Test that userSetup.py imports auroraview_maya_outliner."""
         create_production_usersetup(tmp_path)
-        usersetup_file = tmp_path / "userSetup.py"
+        usersetup_file = tmp_path / "scripts" / "userSetup.py"
         content = usersetup_file.read_text(encoding="utf-8")
         assert "from auroraview_maya_outliner import maya_outliner" in content
 
     def test_usersetup_creates_shelf_button(self, tmp_path: Path) -> None:
         """Test that userSetup.py creates shelf button."""
         create_production_usersetup(tmp_path)
-        usersetup_file = tmp_path / "userSetup.py"
+        usersetup_file = tmp_path / "scripts" / "userSetup.py"
         content = usersetup_file.read_text(encoding="utf-8")
         assert "shelfButton" in content
         assert "AuroraView" in content
@@ -92,7 +92,7 @@ class TestCreateProductionUsersetup:
     def test_usersetup_shelf_command_simple(self, tmp_path: Path) -> None:
         """Test that shelf command is simple without PROJECT_ROOT injection."""
         create_production_usersetup(tmp_path)
-        usersetup_file = tmp_path / "userSetup.py"
+        usersetup_file = tmp_path / "scripts" / "userSetup.py"
         content = usersetup_file.read_text(encoding="utf-8")
         # The shelf command should directly import and call main()
         assert "maya_outliner.main()" in content
@@ -102,8 +102,7 @@ class TestCreateProductionUsersetup:
     def test_usersetup_is_valid_python(self, tmp_path: Path) -> None:
         """Test that generated userSetup.py is valid Python syntax."""
         create_production_usersetup(tmp_path)
-        usersetup_file = tmp_path / "userSetup.py"
+        usersetup_file = tmp_path / "scripts" / "userSetup.py"
         content = usersetup_file.read_text(encoding="utf-8")
         # This will raise SyntaxError if invalid
         compile(content, usersetup_file, "exec")
-

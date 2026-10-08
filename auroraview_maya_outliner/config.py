@@ -98,7 +98,7 @@ class EnvironmentConfig:
         # Convert to absolute path and use forward slashes
         abs_path = self._index_html.resolve()
         # Windows: C:/path/to/file -> file:///C:/path/to/file
-        return f"file:///{abs_path.as_posix()}"
+        return abs_path.as_uri()
 
     def get_dist_dir(self) -> Optional[Path]:
         """Get the dist directory path for asset_root
@@ -155,7 +155,7 @@ class EnvironmentConfig:
                 raise FileNotFoundError(
                     f"Production mode requested but dist files not found.\n"
                     f"Expected: {self._index_html}\n"
-                    f"Please run: npm run build"
+                    f"Please run: vx just build"
                 )
             return static_url
         else:
@@ -204,4 +204,3 @@ __all__ = [
     "is_production",
     "EnvironmentConfig",
 ]
-

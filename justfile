@@ -1,113 +1,37 @@
-# AuroraView Maya Outliner - Just Commands
-# https://github.com/casey/just
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
-# Use PowerShell on Windows
-set shell := ["powershell.exe", "-NoLogo", "-Command"]
-
-# Default Maya installation paths
-MAYA_2022_PATH := "C:/Program Files/Autodesk/Maya2022/bin/maya.exe"
-MAYA_2024_PATH := "C:/Program Files/Autodesk/Maya2024/bin/maya.exe"
-MAYA_2025_PATH := "C:/Program Files/Autodesk/Maya2025/bin/maya.exe"
-
-# Project paths
-PROJECT_ROOT := justfile_directory()
-USERSETUP_FILE := PROJECT_ROOT + "\\userSetup.py"
-
-# Default recipe - show available commands
 default:
-    @just --list
+    @vx just --list
 
-# Install frontend dependencies
 install:
-    npm install
+    vx npm ci
 
-# Start Vite dev server
 dev:
-    npm run dev
+    vx npm run dev -- --host 127.0.0.1
 
-# Build frontend for production
 build:
-    npm run build
+    vx npm run build
 
-# Setup Maya environment and copy userSetup.py with PROJECT_ROOT replacement
-[private]
-setup-maya-env version:
-    @powershell -NoLogo -ExecutionPolicy Bypass -File "{{PROJECT_ROOT}}\setup-maya-env.ps1" -Version "{{version}}" -ProjectRoot "{{PROJECT_ROOT}}"
+test:
+    vx uv run --no-project --python 3.11 --with pytest pytest -c pytest.ini tests -q
 
-# Setup Maya environment with local development version
-[private]
-setup-maya-env-local version:
-    @powershell -NoLogo -ExecutionPolicy Bypass -File "{{PROJECT_ROOT}}\setup-maya-env.ps1" -Version "{{version}}" -ProjectRoot "{{PROJECT_ROOT}}" -UseLocal
+# Source demo archive; the runtime is installed separately in Maya's Python.
+package version="0.1.0-test":
+    vx uv run --no-project --python 3.11 build_maya_package.py --version {{version}} --skip-vendor
 
-# Launch Maya 2022 with AuroraView Outliner
-maya-2022: (setup-maya-env "2022")
-    @Write-Host "Launching Maya 2022..."
-    @if (Test-Path "{{MAYA_2022_PATH}}") { Start-Process "{{MAYA_2022_PATH}}" } else { Write-Host "ERROR: Maya 2022 not found at {{MAYA_2022_PATH}}"; Write-Host "Please update MAYA_2022_PATH in justfile"; exit 1 }
+check: build test
 
-# Launch Maya 2024 with AuroraView Outliner
-maya-2024: (setup-maya-env "2024")
-    @Write-Host "Launching Maya 2024..."
-    @if (Test-Path "{{MAYA_2024_PATH}}") { Start-Process "{{MAYA_2024_PATH}}" } else { Write-Host "ERROR: Maya 2024 not found at {{MAYA_2024_PATH}}"; Write-Host "Please update MAYA_2024_PATH in justfile"; exit 1 }
+# Native Maya scene test; no window is opened and no user preferences are edited.
+maya-smoke mayapy:
+    vx uv run --no-project --python 3.11 scripts/run_maya_smoke.py "{{mayapy}}"
 
-# Launch Maya 2025 with AuroraView Outliner
-maya-2025: (setup-maya-env "2025")
-    @Write-Host "Launching Maya 2025..."
-    @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
+# Install into an explicit directory, then add that directory to Maya's sys.path.
+maya-runtime mayapy target:
+    vx uv pip install --python "{{mayapy}}" --target "{{target}}" auroraview qtpy
 
-# Launch Maya 2022 with LOCAL development version (no rebuild)
-maya-2022-local: (setup-maya-env-local "2022")
-    @Write-Host "Launching Maya 2022 (LOCAL DEV)..."
-    @if (Test-Path "{{MAYA_2022_PATH}}") { Start-Process "{{MAYA_2022_PATH}}" } else { Write-Host "ERROR: Maya 2022 not found at {{MAYA_2022_PATH}}"; Write-Host "Please update MAYA_2022_PATH in justfile"; exit 1 }
+verify-package archive="dist/maya-outliner-0.1.0-test.zip":
+    vx uv run --no-project --python 3.11 scripts/verify_package.py "{{archive}}"
 
-# Launch Maya 2024 with LOCAL development version (no rebuild)
-maya-2024-local: (setup-maya-env-local "2024")
-    @Write-Host "Launching Maya 2024 (LOCAL DEV)..."
-    @if (Test-Path "{{MAYA_2024_PATH}}") { Start-Process "{{MAYA_2024_PATH}}" } else { Write-Host "ERROR: Maya 2024 not found at {{MAYA_2024_PATH}}"; Write-Host "Please update MAYA_2024_PATH in justfile"; exit 1 }
-
-# Launch Maya 2025 with LOCAL development version (no rebuild)
-maya-2025-local: (setup-maya-env-local "2025")
-    @Write-Host "Launching Maya 2025 (LOCAL DEV)..."
-    @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
-
-# Launch Maya 2022 with LOCAL version (rebuild frontend first)
-maya-2022-build: build (setup-maya-env-local "2022")
-    @Write-Host "Launching Maya 2022 (LOCAL DEV with rebuild)..."
-    @if (Test-Path "{{MAYA_2022_PATH}}") { Start-Process "{{MAYA_2022_PATH}}" } else { Write-Host "ERROR: Maya 2022 not found at {{MAYA_2022_PATH}}"; Write-Host "Please update MAYA_2022_PATH in justfile"; exit 1 }
-
-# Launch Maya 2024 with LOCAL version (rebuild frontend first)
-maya-2024-build: build (setup-maya-env-local "2024")
-    @Write-Host "Launching Maya 2024 (LOCAL DEV with rebuild)..."
-    @if (Test-Path "{{MAYA_2024_PATH}}") { Start-Process "{{MAYA_2024_PATH}}" } else { Write-Host "ERROR: Maya 2024 not found at {{MAYA_2024_PATH}}"; Write-Host "Please update MAYA_2024_PATH in justfile"; exit 1 }
-
-# Launch Maya 2025 with LOCAL version (rebuild frontend first)
-maya-2025-build: build (setup-maya-env-local "2025")
-    @Write-Host "Launching Maya 2025 (LOCAL DEV with rebuild)..."
-    @if (Test-Path "{{MAYA_2025_PATH}}") { Start-Process "{{MAYA_2025_PATH}}" } else { Write-Host "ERROR: Maya 2025 not found at {{MAYA_2025_PATH}}"; Write-Host "Please update MAYA_2025_PATH in justfile"; exit 1 }
-
-# Clean Maya environment (remove userSetup.py)
-clean-maya version:
-    @Write-Host "Cleaning Maya {{version}} environment..."
-    @$userSetupPath = "$env:USERPROFILE\Documents\maya\{{version}}\scripts\userSetup.py"; if (Test-Path $userSetupPath) { Remove-Item $userSetupPath; Write-Host "✓ Removed userSetup.py from Maya {{version}}" } else { Write-Host "No userSetup.py found in Maya {{version}}" }
-
-# Clean all Maya versions
-clean-all-maya:
-    @just clean-maya 2022
-    @just clean-maya 2024
-    @just clean-maya 2025
-
-# Show Maya environment info
-info:
-    @Write-Host "=== AuroraView Maya Outliner ==="
-    @Write-Host "Project Root: {{PROJECT_ROOT}}"
-    @Write-Host "UserSetup File: {{USERSETUP_FILE}}"
-    @Write-Host ""
-    @Write-Host "=== Maya Installations ==="
-    @if (Test-Path "{{MAYA_2022_PATH}}") { Write-Host "✓ Maya 2022: {{MAYA_2022_PATH}}" } else { Write-Host "✗ Maya 2022: Not found" }
-    @if (Test-Path "{{MAYA_2024_PATH}}") { Write-Host "✓ Maya 2024: {{MAYA_2024_PATH}}" } else { Write-Host "✗ Maya 2024: Not found" }
-    @if (Test-Path "{{MAYA_2025_PATH}}") { Write-Host "✓ Maya 2025: {{MAYA_2025_PATH}}" } else { Write-Host "✗ Maya 2025: Not found" }
-    @Write-Host ""
-    @Write-Host "=== UserSetup Status ==="
-    @if (Test-Path "$env:USERPROFILE\Documents\maya\2022\scripts\userSetup.py") { Write-Host "✓ Maya 2022: Installed" } else { Write-Host "✗ Maya 2022: Not installed" }
-    @if (Test-Path "$env:USERPROFILE\Documents\maya\2024\scripts\userSetup.py") { Write-Host "✓ Maya 2024: Installed" } else { Write-Host "✗ Maya 2024: Not installed" }
-    @if (Test-Path "$env:USERPROFILE\Documents\maya\2025\scripts\userSetup.py") { Write-Host "✓ Maya 2025: Installed" } else { Write-Host "✗ Maya 2025: Not installed" }
-
+# Refresh the lockfile within declared compatible dependency ranges.
+update:
+    vx npm update

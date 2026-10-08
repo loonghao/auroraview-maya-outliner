@@ -131,8 +131,8 @@ export type IPCEventHandler = (data: unknown) => void
  * Maya IPC interface
  */
 export interface MayaIPC {
-  /** Send message to Maya */
-  sendToMaya: (event: string, data: Record<string, unknown>) => void
+  /** Call an explicitly bound Python method. */
+  callAPI: <T = unknown>(method: string, params?: unknown) => Promise<T>
 
   /** Register event handler */
   onMayaEvent: (event: string, handler: IPCEventHandler) => void
@@ -140,4 +140,3 @@ export interface MayaIPC {
   /** Unregister event handler */
   offMayaEvent: (event: string, handler: IPCEventHandler) => void
 }
-

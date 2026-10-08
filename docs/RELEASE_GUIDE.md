@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # Release Guide
 
 This document describes how to create a new release of AuroraView Maya Outliner.
@@ -69,7 +71,7 @@ The release workflow (`.github/workflows/release.yml`) will automatically:
 
 ### 4. Verify Release
 
-1. Go to [Releases](https://github.com/loonghao/auroraview-maya-outliner/releases)
+1. Go to [Releases](https://github.com/try-auroraview/auroraview-maya-outliner/releases)
 2. Check that the new release is created
 3. Verify the zip file is attached
 4. Test download and installation
@@ -188,4 +190,3 @@ If GitHub Actions fails, you can create a release manually:
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Semantic Versioning](https://semver.org/)
 - [Keep a Changelog](https://keepachangelog.com/)
-

@@ -165,6 +165,11 @@ PYTHONPATH +:= vendor
 scripts: scripts
 PYTHONPATH +:= .
 PYTHONPATH +:= vendor
+
++ MAYAVERSION:2026 auroraview-maya-outliner {version} ./
+scripts: scripts
+PYTHONPATH +:= .
+PYTHONPATH +:= vendor
 """,
         encoding="utf-8",
     )
@@ -491,13 +496,13 @@ def build_package(version: str, skip_vendor: bool = False) -> Path:
     print("📁 Copying frontend files...")
     if not DIST_DIR.exists():
         raise FileNotFoundError("dist/ directory not found. Run 'npm run build' first!")
-    shutil.copytree(DIST_DIR, package_dir / "dist")
+    shutil.copytree(DIST_DIR, package_dir / "dist", ignore=shutil.ignore_patterns("*.zip"))
 
     # 2. Copy auroraview_maya_outliner
     print("📁 Copying Maya integration code...")
     if not MAYA_INTEGRATION_DIR.exists():
         raise FileNotFoundError(f"Maya integration directory not found: {MAYA_INTEGRATION_DIR}")
-    shutil.copytree(MAYA_INTEGRATION_DIR, package_dir / "auroraview_maya_outliner")
+    shutil.copytree(MAYA_INTEGRATION_DIR, package_dir / "auroraview_maya_outliner", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
     # 3. Download vendor packages (third-party dependencies)
     if not skip_vendor:
@@ -510,6 +515,7 @@ def build_package(version: str, skip_vendor: bool = False) -> Path:
     # 4. Create scripts directory with userSetup.py
     print("📝 Creating userSetup.py...")
     scripts_dir = package_dir / "scripts"
+    shutil.copytree(PROJECT_ROOT / "scripts", scripts_dir)
     create_usersetup(scripts_dir)
 
     # 5. Create installation scripts
@@ -519,6 +525,21 @@ def build_package(version: str, skip_vendor: bool = False) -> Path:
     # 6. Create .mod file
     print("📝 Creating Maya module file...")
     create_mod_file(package_dir, version)
+
+    # Include the files used by the maintained tutorial and reproducible recipes.
+    for name in (
+        "README.md", "README_zh.md", "justfile", "vx.toml", "package.json",
+        "package-lock.json", ".npmrc", "index.html", "vite.config.ts",
+        "tsconfig.json", "tailwind.config.cjs", "postcss.config.cjs",
+        "components.json", "pytest.ini", "build_maya_package.py", "build_utils.py",
+    ):
+        shutil.copy2(PROJECT_ROOT / name, package_dir / name)
+    for name in ("docs", "src", "public", "tests"):
+        shutil.copytree(
+            PROJECT_ROOT / name,
+            package_dir / name,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
 
     # 7. Create zip file
     print("🗜️  Creating zip archive...")
@@ -565,17 +586,27 @@ def main():
         print("Package contents:")
         print("  📁 dist/           - Built frontend files")
         print("  📁 auroraview_maya_outliner/ - Maya integration code")
-        print("  📁 vendor/         - Third-party dependencies (auroraview)")
+        if not args.skip_vendor:
+            print("  vendor/           - Third-party dependencies")
+        else:
+            print("  Runtime dependencies are not bundled in this source archive.")
         print("  📁 scripts/        - userSetup.py for auto-loading")
         print("  📄 maya-outliner.mod - Maya module file")
         print("  📄 install.bat/ps1 - Installation scripts")
         print()
         print("To install:")
-        print("  1. Extract the zip file")
-        print("  2. Run install.bat (Windows) or install.ps1 (PowerShell)")
-        print("  3. Follow the prompts to install userSetup.py")
-        print("  4. Restart Maya")
-        print(f"  5. Look for the '{SHELF_NAME}' shelf and click 'Outliner'")
+        if args.skip_vendor:
+            print("  1. Extract the zip file and open README.md or README_zh.md.")
+            print("  2. Install auroraview and qtpy using the matching Maya interpreter.")
+            print("  3. Add the extracted source and runtime directories to Maya's sys.path.")
+            print("  4. Run main(use_local=True) in Maya's Python Script Editor.")
+            print("  Legacy installers are included for reference; follow the README tutorial.")
+        else:
+            print("  1. Extract the zip file")
+            print("  2. Run install.bat (Windows) or install.ps1 (PowerShell)")
+            print("  3. Follow the prompts to install userSetup.py")
+            print("  4. Restart Maya")
+            print(f"  5. Look for the '{SHELF_NAME}' shelf and click 'Outliner'")
         print("=" * 60)
     except Exception as e:
         print(f"❌ Error: {e}")
@@ -589,5 +620,3 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
-
-

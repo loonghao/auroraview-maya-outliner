@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, provide, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, provide, watch } from 'vue'
 import OutlinerTree from './components/OutlinerTree.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import Toolbar from './components/Toolbar.vue'
@@ -29,6 +29,7 @@ const { scaleStyle, updateDimensions } = useResponsiveScale({
 const sceneData = ref<MayaNode[]>([])
 const selectedNode = ref<string | null>(null)
 const selectedNodes = ref<Set<string>>(new Set()) // Multi-selection support
+provide('selectedNodes', selectedNodes)
 const searchQuery = ref('')
 const isConnected = ref(false)
 const isUpdating = ref(false)
@@ -81,7 +82,7 @@ const handleDeleteSelected = async () => {
   if (!selectedNode.value) return
 
   try {
-    await callAPI('delete_node', { name: selectedNode.value })
+    await callAPI('delete_node', { node_name: selectedNode.value })
     selectedNode.value = null
     await refreshSceneData()
   } catch (error) {
@@ -95,7 +96,7 @@ const handleDropOnRoot = async (event: DragEvent) => {
   if (!nodeName) return
 
   try {
-    await callAPI('parent_node', { child: nodeName, parent: null })
+    await callAPI('parent_nodes', { child_name: nodeName, parent_name: null })
     await refreshSceneData()
   } catch (error) {
     console.error('[App] Failed to unparent node:', error)
@@ -191,13 +192,10 @@ const saveWindowSize = async (width: number, height: number) => {
 }
 
 onMounted(async () => {
-  // Load saved preferences
-  await loadPreferences()
-
   // Wait for AuroraView API to be ready
   const waitForAPI = async (maxAttempts = 50, interval = 100) => {
     for (let i = 0; i < maxAttempts; i++) {
-      if (window.auroraview?.api) {
+      if (typeof window.auroraview?.call === 'function' && typeof window.auroraview?.on === 'function') {
         return true
       }
       await new Promise(resolve => setTimeout(resolve, interval))
@@ -209,12 +207,16 @@ onMounted(async () => {
   if (!apiReady) {
     return
   }
+  await loadPreferences()
 
   // Request initial scene data using modern API
   try {
     const hierarchy = await getSceneHierarchy()
     sceneData.value = hierarchy
     isConnected.value = true
+    const selected = await callAPI<string[]>('get_selection')
+    selectedNodes.value = new Set(selected)
+    selectedNode.value = selected[selected.length - 1] || null
   } catch (error) {
     console.error('[App] Failed to load scene hierarchy:', error)
   }
@@ -235,7 +237,8 @@ onMounted(async () => {
 
   onMayaEvent('selection_changed', (data: unknown) => {
     const node = EventDataAdapter.extractString(data, 'node', 'name')
-    selectedNode.value = node
+    selectedNode.value = node || null
+    selectedNodes.value = new Set(EventDataAdapter.extractArray<string>(data, 'nodes'))
   })
 
   // Listen for window resize events from backend
@@ -275,7 +278,15 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeyDown)
 })
 
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+  if (saveTimeout) clearTimeout(saveTimeout)
+  if (saveWindowSizeTimeout) clearTimeout(saveWindowSizeTimeout)
+})
+
 const handleKeyDown = async (event: KeyboardEvent) => {
+  const target = event.target as HTMLElement | null
+  if (target?.closest('input, textarea, [contenteditable=true]')) return
   // Ctrl+G: Group selected nodes
   if ((event.ctrlKey || event.metaKey) && event.key === 'g' && selectedNode.value) {
     event.preventDefault()
@@ -377,7 +388,7 @@ const handleNodeSelect = async (nodeName: string, event?: MouseEvent) => {
     }
     selectedNode.value = nodeName // Keep last selected as primary
   } else if (event?.shiftKey && selectedNode.value) {
-    // Shift + Click: Range selection (TODO: implement range logic)
+    // Shift + Click: Add this node to the current selection
     selectedNodes.value.add(selectedNode.value)
     selectedNodes.value.add(nodeName)
     selectedNode.value = nodeName
@@ -389,14 +400,10 @@ const handleNodeSelect = async (nodeName: string, event?: MouseEvent) => {
   }
 
   try {
-    // Select all nodes in Maya
-    if (selectedNodes.value.size > 1) {
-      await callAPI('select_multiple_nodes', {
-        node_names: Array.from(selectedNodes.value)
-      })
-    } else {
-      await selectNode(nodeName)
-    }
+    // Submit the resulting set, including one remaining row or an empty set.
+    await callAPI('select_multiple_nodes', {
+      node_names: Array.from(selectedNodes.value)
+    })
   } catch (error) {
     console.error('[App] Failed to select node:', error)
   }
@@ -442,18 +449,6 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
   const api = {
     selectNode,
     setVisibility,
-    showOnlyDagObjects: async (nodeName: string) => {
-      return callAPI('show_only_dag_objects', { node_name: nodeName })
-    },
-    showShapes: async (nodeName: string) => {
-      return callAPI('show_shapes', { node_name: nodeName })
-    },
-    showSelected: async (nodeName: string) => {
-      return callAPI('show_selected', { node_name: nodeName })
-    },
-    hideInOutliner: async (nodeName: string) => {
-      return callAPI('hide_in_outliner', { node_name: nodeName })
-    },
     deleteNode: async (nodeName: string) => {
       return callAPI('delete_node', { node_name: nodeName })
     },
@@ -802,4 +797,3 @@ const handleContextMenu = (event: MouseEvent, node: MayaNode) => {
   color: #4b5563;
 }
 </style>
-

@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # Release System Implementation Summary
 
 ## Overview
@@ -222,7 +224,7 @@ auroraview-maya-outliner/
 
 1. **Clone and build:**
    ```bash
-   git clone https://github.com/loonghao/auroraview-maya-outliner.git
+   git clone https://github.com/try-auroraview/auroraview-maya-outliner.git
    cd auroraview-maya-outliner
    npm install
    npm run build
@@ -320,4 +322,3 @@ unzip -l dist/maya-outliner-0.1.0-test.zip
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Nox Documentation](https://nox.thea.codes/)
 - [Semantic Versioning](https://semver.org/)
-

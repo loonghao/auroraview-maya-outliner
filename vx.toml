@@ -1,0 +1,4 @@
+[tools]
+node = "22"
+uv = "latest"
+just = "latest"

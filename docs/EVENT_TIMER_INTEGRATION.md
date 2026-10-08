@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # EventTimer Integration for Smooth Window Dragging
 
 ## 问题描述
@@ -119,4 +121,3 @@ outliner = test_event_timer_integration.test_event_timer()
 
 - [AuroraView EventTimer 文档](https://github.com/longhao-li/auroraview/blob/main/docs/event_timer.md)
 - [Timer Architecture](https://github.com/longhao-li/auroraview/blob/main/docs/TIMER_ARCHITECTURE.md)
-

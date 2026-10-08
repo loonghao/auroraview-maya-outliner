@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # Performance Optimization Guide
 
 This document describes the performance optimizations implemented in AuroraView for smooth 60 FPS operation in DCC environments.
@@ -179,4 +181,3 @@ npm run dev
 - [Qt Integration Best Practices](QT_BEST_PRACTICES.md)
 - [Architecture Overview](ARCHITECTURE_LAYERED_DESIGN.md)
 - [Maya Integration Guide](MAYA_SOLUTION.md)
-

@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # 优雅重构总结：从 Hook 模式到方法重写模式
 
 ## 🎯 重构目标
@@ -213,4 +215,3 @@ def update_scene_batch(nodes):
 5. ✅ **避免技术债** - 在积极开发阶段做出正确选择
 
 **设计哲学：** 在积极开发阶段，我们选择优雅而不是妥协，选择清晰而不是复杂。
-

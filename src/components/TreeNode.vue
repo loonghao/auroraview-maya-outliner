@@ -21,7 +21,8 @@ const emit = defineEmits<Emits>()
 
 const isExpanded = ref(true)
 const hasChildren = computed(() => props.node.children.length > 0)
-const isSelected = computed(() => props.node.name === props.selectedNode)
+const selectedNodes = inject<Ref<Set<string>>>('selectedNodes', ref(new Set<string>()))
+const isSelected = computed(() => selectedNodes.value.has(props.node.path))
 
 // Drag and drop state
 const isDragging = ref(false)
@@ -131,7 +132,7 @@ const renamingValue = ref('')
 const renameInput = ref<HTMLInputElement | null>(null)
 
 const handleClick = (event: MouseEvent) => {
-  emit('node-select', props.node.name, event)
+  emit('node-select', props.node.path, event)
 }
 
 const handleDoubleClick = async () => {
@@ -144,7 +145,7 @@ const handleDoubleClick = async () => {
 
 const handleRename = () => {
   if (renamingValue.value && renamingValue.value !== props.node.name) {
-    emit('node-rename', props.node.name, renamingValue.value)
+    emit('node-rename', props.node.path, renamingValue.value)
   }
   isRenaming.value = false
 }
@@ -159,7 +160,7 @@ const handleRenameKeydown = (event: KeyboardEvent) => {
 
 const toggleVisibility = (event: Event) => {
   event.stopPropagation()
-  emit('visibility-toggle', props.node.name, !props.node.visible)
+  emit('visibility-toggle', props.node.path, !props.node.visible)
 }
 
 const handleContextMenu = (event: MouseEvent) => {
@@ -174,7 +175,7 @@ const handleDragStart = (event: DragEvent) => {
 
   isDragging.value = true
   event.dataTransfer.effectAllowed = 'move'
-  event.dataTransfer.setData('text/plain', props.node.name)
+  event.dataTransfer.setData('text/plain', props.node.path)
 
   // Add a custom drag image (optional)
   if (event.target instanceof HTMLElement) {
@@ -226,14 +227,14 @@ const handleDrop = (event: DragEvent) => {
   const draggedNodeName = event.dataTransfer.getData('text/plain')
 
   // Don't allow dropping on itself
-  if (draggedNodeName === props.node.name) {
+  if (draggedNodeName === props.node.path) {
     isDragOver.value = false
     dragOverPosition.value = null
     return
   }
 
   // Don't allow dropping a parent onto its own child
-  if (props.node.path.includes(draggedNodeName)) {
+  if (props.node.path.startsWith(draggedNodeName + '|')) {
     isDragOver.value = false
     dragOverPosition.value = null
     return
@@ -244,7 +245,7 @@ const handleDrop = (event: DragEvent) => {
 
   if (dragOverPosition.value === 'middle') {
     // Parent to this node
-    newParent = props.node.name
+    newParent = props.node.path
   } else if (dragOverPosition.value === 'top' || dragOverPosition.value === 'bottom') {
     // Parent to this node's parent (sibling)
     newParent = props.node.parent || null
@@ -554,4 +555,3 @@ const handleDrop = (event: DragEvent) => {
   margin-left: 0;
 }
 </style>
-

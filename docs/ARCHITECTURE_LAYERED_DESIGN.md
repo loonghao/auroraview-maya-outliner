@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # AuroraView 分层架构设计
 
 ## 🎯 设计目标
@@ -245,4 +247,3 @@ class MyFrameworkWebView:
 ```
 
 **核心原则：** 底层解决问题，上层自动受益，避免重复修改。
-

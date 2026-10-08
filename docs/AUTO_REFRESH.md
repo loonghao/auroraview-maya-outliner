@@ -1,3 +1,5 @@
+> Historical design note from the original example. For the maintained runtime, commands and acceptance status, see the [current tutorial](../README.md) and [validation record](VALIDATION.md).
+
 # Maya Outliner - Auto Refresh
 
 ## Overview
@@ -158,4 +160,3 @@ If you experience performance issues with very large scenes:
 - [ ] Add option to disable auto-refresh
 - [ ] Add visual feedback when updating
 - [ ] Add incremental updates (only changed nodes)
-
