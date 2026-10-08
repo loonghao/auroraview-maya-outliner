@@ -164,4 +164,3 @@ def test_callback_removal_failure_attempts_remaining_ids_and_can_retry():
     callbacks.close()
     assert callbacks.ids == []
     assert host.MMessage.removeCallback.call_args.args == (registered[1],)
-

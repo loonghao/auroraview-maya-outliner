@@ -18,4 +18,3 @@ The repository ID and node ID were read back after transfer and matched the orig
 No LICENSE file was present in the source tree at the preserved source HEAD, and GitHub's license field was null. This migration does not add a license or expand permission to use the original work. AuroraView itself and third-party dependencies retain their own independent licenses. A future explicit license decision belongs to the original rights holder.
 
 The preview image is retained from the original project. It is historical project material, not proof that the migrated revision has passed native UI acceptance.
-

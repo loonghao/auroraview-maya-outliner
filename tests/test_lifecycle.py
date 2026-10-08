@@ -67,4 +67,3 @@ def test_callback_failure_still_destroys_view_and_releases_registry():
     outliner._dispose()
     assert callbacks.ids == []
     view.destroy.assert_called_once_with()
-
