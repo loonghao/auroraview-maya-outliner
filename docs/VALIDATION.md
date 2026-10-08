@@ -9,6 +9,8 @@ Evidence is tracked separately for source, builds and native interaction. A pass
 | Scene contracts outside Maya | Passed on 2026-10-09: 34 tests via `vx just test`; full DAG identity, ambiguous names, empty/multiple selection, host errors, main-thread refusal and callback teardown. |
 | Source demo archive | Passed on 2026-10-09: `vx just package 0.1.0-test` and `vx just verify-package`; Python modules, built JS, tutorial and provenance present. Runtime is installed separately. |
 | Native Maya scene smoke | Passed on Maya 2026 on 2026-10-09 via `vx just maya-smoke "<Maya>/bin/mayapy.exe"`: hierarchy, duplicate DAG names, selection, multiple/empty selection, visibility and callback registration/removal. All 10 registered callbacks were released. |
+| Shared ToolSet preparation | Factory, artifact checks and headless HTTP consumer gate added. Ordinary preparation tests and factory tests against a frozen local wheel pass; this is development evidence. See [shared tools](SHARED_TOOLS.md). |
+| Public contract wheel in native Maya | Pending public wheel URL/checksum and the `maya-contract` run. This gate covers actual Core HTTP/MCP calls, Maya rename/readback/Undo, unload and cleanup. |
 | Interactive Maya/WebView demo | Not yet recorded for the migrated revision. Requires interactive Maya, the matching AuroraView wheel/qtpy, WebView2 Runtime, and a verified launch/selection/visibility/close cycle. |
 | Other Maya versions / operating systems | Not certified by this migration. |
 
