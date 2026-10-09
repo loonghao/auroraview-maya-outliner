@@ -341,6 +341,7 @@ const handleDrop = (event: DragEvent) => {
 }
 
 .node-row {
+  position: relative;
   display: flex;
   align-items: center;
   height: 24px;
