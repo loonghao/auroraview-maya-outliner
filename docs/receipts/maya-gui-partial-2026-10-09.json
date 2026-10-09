@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "status": "partial-interactive-acceptance",
+  "host": {
+    "application": "Maya",
+    "version": "2026",
+    "python": "3.11.9",
+    "platform": "Windows x64"
+  },
+  "ui_provider": {
+    "name": "dcc-cua",
+    "runtime_version": "1.9.4"
+  },
+  "public_dependencies": {
+    "auroraview": {
+      "version": "0.5.12",
+      "wheel_url": "https://github.com/try-auroraview/auroraview/releases/download/auroraview-v0.5.12/auroraview-0.5.12-cp38-abi3-win_amd64.whl",
+      "wheel_sha256": "e30ac11fad4acd7f24aa29e8599be9fb4c99ea7a92211909b8e379be4dd72ab7"
+    },
+    "auroraview-dcc-mcp": {
+      "version": "0.1.0",
+      "release": "0.1.0-preview.1",
+      "wheel_url": "https://github.com/try-auroraview/auroraview/releases/download/auroraview-dcc-mcp-v0.1.0-preview.1/auroraview_dcc_mcp-0.1.0-py3-none-any.whl",
+      "wheel_sha256": "450b74fd7c11c9247f076b456197a4c5b299c9edb34f851fda5ccc5cf1bf3558"
+    },
+    "dcc-mcp-core": {"version": "0.20.41"},
+    "dcc-mcp-maya": {
+      "version": "0.9.34",
+      "wheel_sha256": "cfecc4ec3dfcba43955cd059591a3e6c81864b704a8a8651eab4e5f2acc3dede"
+    },
+    "dcc-mcp-server": {
+      "version": "0.20.42",
+      "wheel_sha256": "da35c18937a8247fa5a57bf17269fb334ed20aac1c51f84b1df2ab02c2a8b67c"
+    },
+    "qtpy": {"version": "2.4.3"},
+    "packaging": {"version": "25.0"},
+    "qt_binding": "Maya-bundled PySide6"
+  },
+  "sessions": [
+    {
+      "source_commit": "f1231286392972c6201ab193f3f68b5fa709769e",
+      "scope": "First real Maya panel session, before the retained-owner lifecycle change",
+      "gates": {
+        "vue_pixels_in_native_right_dock": true,
+        "frontend_ready": true,
+        "floating_false": true,
+        "handler_threads_equal_main_thread": true,
+        "ui_root_selection_native_readback": true,
+        "real_mcp_discovery_shared_tools": true,
+        "real_mcp_rename_native_scene_readback": true,
+        "mcp_rename_event_visible_in_vue": true,
+        "native_foreground_ctrl_z_restored_before": true,
+        "ui_double_click_type_blur_rename_from_ui_native_readback": true,
+        "panel_close_stale_binding_closed_error": true,
+        "panel_close_callbacks_zero_workspace_view_dialog_absent": true,
+        "panel_close_borrowed_toolset_and_service_alive": true,
+        "probe_close_fixture_absent_selection_restored": true,
+        "probe_close_exact_callable_methods_absent_from_mcp_inventory": true
+      },
+      "callback_counts": {"open": 10, "after_close": 0},
+      "limitations": [
+        "The inline rename editor appeared at the top of the tree; a later CSS commit addressed its row anchoring.",
+        "An unloaded Core catalog declaration remained; this session does not prove same-name owner recreation.",
+        "This session does not accept later retained-owner lifecycle source changes."
+      ]
+    },
+    {
+      "source_commit": "434822e37e8c3984ead02d28d354e04390929a09",
+      "scope": "CSS follow-up with an unattached ToolSet and no MCP agent attachment",
+      "gates": {
+        "inline_editor_anchored_to_correct_row": true,
+        "typed_text_visible": true,
+        "rename_commit_after_css_fix_accepted": false,
+        "mcp_attachment_or_reattachment_accepted": false,
+        "stale_ui_binding_closed_error": true,
+        "callbacks_workspace_and_view_removed": true,
+        "fixture_removed": true,
+        "toolset_closed": true,
+        "borrowed_server_alive_after_cleanup": true
+      },
+      "limitation": "A subsequent UIA observation timed out. Input stopped; remaining commit and docking interaction checks were not completed."
+    },
+    {
+      "source_commit": "96c985467b3f697f98a85f31641db09bbefdfebf",
+      "scope": "Retained host-owner source candidate; no new real Maya session",
+      "gates": {
+        "source_tests_passed": true,
+        "frontend_build_passed": true,
+        "source_archive_verified": true,
+        "published_api_dispatch_controlled_fixture_passed": true,
+        "real_maya_retained_owner_reopen_accepted": false
+      },
+      "source_test_count": 94,
+      "dispatch_test_scope": "Verified public AuroraView 0.5.12 Python dispatch code with controlled IPC and scene fixtures; no native IPC or GUI created."
+    }
+  ],
+  "final_cleanup": {
+    "panels_fixtures_and_bindings_released": true,
+    "owned_host_adapter_and_gateway_stopped": true,
+    "cua_tasks_stopped": true,
+    "remaining_owned_process_count": 0
+  },
+  "pending": [
+    "Real Maya close-view/open-view acceptance using the same retained ToolSet and AgentBinding.",
+    "Rename commit after the CSS fix, complete docking interactions, DPI and the remaining input matrix."
+  ],
+  "pending_gates": {
+    "retained_owner_real_maya_reopen_accepted": false,
+    "css_followup_rename_commit_accepted": false,
+    "docking_move_float_redock_close_button_accepted": false,
+    "dpi_and_remaining_input_matrix_accepted": false
+  },
+  "public_core_boundary": {
+    "version": "0.20.41",
+    "unloaded_catalog_metadata_retained": true,
+    "same_name_owner_recreation_after_final_close_supported": false,
+    "private_catalog_workaround_used": false
+  }
+}
