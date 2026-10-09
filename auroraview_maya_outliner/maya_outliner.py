@@ -1,6 +1,7 @@
 """Qt-hosted Maya Outliner. Run main() inside Maya's Script Editor."""
 
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 from .config import get_frontend_url, get_index_html_path, is_production
@@ -96,7 +97,6 @@ class MayaOutliner:
             asset_root=str(Path(index).parent) if index else None,
         )
         layout.addWidget(self.webview)
-        self.webview.bind_api(self.api)
         self._bind_tools(tools)
         self.webview.bind_call("api.resize_window", self.resize_window)
         self.webview.bind_call("api.get_window_size", self.get_window_size)
@@ -120,20 +120,26 @@ class MayaOutliner:
         return self
 
     def _bind_tools(self, tools):
-        """Borrow UI routes; the caller retains the ToolSet and Core service."""
-        if tools is None:
-            return
-        binding = tools.bind(self.webview)
-        self._ui_binding = binding
+        """Choose each UI route once; the caller retains tools and the service."""
+        routes = self.api
+        if tools is not None:
+            binding = tools.bind(self.webview)
+            self._ui_binding = binding
 
-        def rename(old_name, new_name):
-            # Preserve the stock Vue call and result while sharing the exact
-            # schema, handler and scene readback with registered agent tools.
-            return binding.call(
-                "scene.rename", {"old_name": old_name, "new_name": new_name},
-            )["result"]
+            def rename(old_name, new_name):
+                # Preserve the Vue result while sharing schema and readback.
+                return binding.call(
+                    "scene.rename", {"old_name": old_name, "new_name": new_name},
+                )["result"]
 
-        self.webview.bind_call("api.rename_node", rename)
+            routes = SimpleNamespace(**{
+                name: getattr(self.api, name) for name in dir(self.api)
+                if not name.startswith("_") and callable(getattr(self.api, name))
+            })
+            routes.rename_node = rename
+        # Public AuroraView 0.5.12 accumulates handlers on rebind. Select the
+        # shared rename before registering any legacy route, never afterward.
+        self.webview.bind_api(routes)
 
     def frontend_ready(self):
         """Acknowledge the Vue mount, initial scene read and event subscription."""

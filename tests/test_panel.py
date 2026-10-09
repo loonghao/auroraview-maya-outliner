@@ -39,10 +39,15 @@ def host(monkeypatch, tmp_path):
             self.load_file = Mock()
             self.show = Mock()
             self.destroy = Mock()
-            self.bind_api = Mock()
+            self.bind_api = Mock(wraps=self._bind_api)
 
         def bind_call(self, name, handler):
-            self.routes[name] = handler
+            self.routes.setdefault(name, []).append(handler)
+
+        def _bind_api(self, api):
+            for name in dir(api):
+                if not name.startswith("_") and callable(getattr(api, name)):
+                    self.bind_call("api." + name, getattr(api, name))
 
     modules = {
         "auroraview": SimpleNamespace(QtWebView=View),
@@ -146,3 +151,16 @@ def test_failed_startup_retains_singleton_when_rollback_needs_retry(monkeypatch)
     with pytest.raises(RuntimeError, match="cleanup busy"):
         maya_outliner.main(singleton_key="startup-retry")
     assert factory._instances["startup-retry"] is panel
+
+
+def test_shared_run_registers_each_legacy_route_once_without_rebinding(host):
+    host.scene.rename_node = Mock()
+    binding = SimpleNamespace(call=Mock(return_value={"result": {"ok": True, "node": "|after"}}))
+    tools = SimpleNamespace(bind=Mock(return_value=binding))
+    panel = maya_outliner.MayaOutliner().run(use_local=True, tools=tools)
+    assert all(len(handlers) == 1 for handlers in panel.webview.routes.values())
+    handlers = panel.webview.routes["api.rename_node"]
+    results = [handler(old_name="|before", new_name="after") for handler in handlers]
+    assert results == [{"ok": True, "node": "|after"}]
+    binding.call.assert_called_once_with("scene.rename", {"old_name": "|before", "new_name": "after"})
+    host.scene.rename_node.assert_not_called()

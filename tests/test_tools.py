@@ -92,24 +92,46 @@ def test_worker_call_is_refused_before_business_handler(scene):
 
 
 def test_panel_borrows_shared_rename_and_preserves_legacy_result(scene):
-    routes = {}
+    class AccumulatingView:
+        def __init__(self):
+            self.routes = {}
+
+        def bind_call(self, name, handler):
+            self.routes.setdefault(name, []).append(handler)
+
+        def bind_api(self, api):
+            for name in dir(api):
+                if not name.startswith("_") and callable(getattr(api, name)):
+                    self.bind_call("api." + name, getattr(api, name))
+
+        def dispatch(self, name, **params):
+            return [handler(**params) for handler in self.routes[name]]
+
     panel = object.__new__(MayaOutliner)
     panel._ui_binding = None
-    panel.webview = SimpleNamespace(bind_call=lambda name, handler: routes.update({name: handler}))
+    panel.api = scene
+    panel.webview = AccumulatingView()
+    original_rename = scene.rename_node
+    scene.get_scene_hierarchy = Mock(wraps=scene.get_scene_hierarchy)
+    scene.get_selection = Mock(wraps=scene.get_selection)
     tools = create_tools(scene)
     try:
         panel._bind_tools(tools)
-        assert set(routes) == {"scene.snapshot", "scene.rename", "api.rename_node"}
-        alias = routes["api.rename_node"]
+        assert {"scene.snapshot", "scene.rename", "api.rename_node"} <= set(panel.webview.routes)
+        assert all(len(handlers) == 1 for handlers in panel.webview.routes.values())
+        assert scene.rename_node == original_rename
         with pytest.raises(contracts.ContractError):
-            alias(old_name="|left|same", new_name="|invalid")
+            panel.webview.dispatch("api.rename_node", old_name="|left|same", new_name="|invalid")
         scene._cmds.rename.assert_not_called()
-        result = alias(old_name="|left|same", new_name="shared")
-        assert result == {"ok": True, "node": "|left|shared"}
-        assert routes["scene.snapshot"]() == tools.call("scene.snapshot")
+        result = panel.webview.dispatch("api.rename_node", old_name="|left|same", new_name="shared")
+        assert result == [{"ok": True, "node": "|left|shared"}]
+        scene._cmds.rename.assert_called_once_with("|left|same", "shared")
+        scene.get_scene_hierarchy.assert_called_once_with()
+        scene.get_selection.assert_called_with()
+        assert panel.webview.dispatch("scene.snapshot") == [tools.call("scene.snapshot")]
         panel._ui_binding.close()
         with pytest.raises(contracts.ClosedError):
-            alias(old_name="|left|shared", new_name="stale")
+            panel.webview.dispatch("api.rename_node", old_name="|left|shared", new_name="stale")
         assert not tools.closed
         assert tools.call("scene.snapshot")["hierarchy"]
     finally:
@@ -119,8 +141,10 @@ def test_panel_borrows_shared_rename_and_preserves_legacy_result(scene):
 def test_stock_panel_does_not_import_or_bind_optional_contracts():
     panel = object.__new__(MayaOutliner)
     panel._ui_binding = None
-    panel.webview = SimpleNamespace(bind_call=Mock())
+    panel.api = object()
+    panel.webview = SimpleNamespace(bind_call=Mock(), bind_api=Mock())
     panel._bind_tools(None)
+    panel.webview.bind_api.assert_called_once_with(panel.api)
     panel.webview.bind_call.assert_not_called()
     assert panel._ui_binding is None
 
