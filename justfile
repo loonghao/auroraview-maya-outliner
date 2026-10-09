@@ -29,6 +29,13 @@ maya-smoke mayapy:
 maya-runtime mayapy target:
     vx uv pip install --python "{{mayapy}}" --target "{{target}}" auroraview qtpy
 
+# Fixed public GUI candidate; never install another Qt binding into Maya.
+maya-gui-runtime mayapy target:
+    vx uv pip install --python "{{mayapy}}" --target "{{target}}" --no-deps --no-compile-bytecode --require-hashes --requirements scripts/maya-gui-runtime.txt
+
+maya-gui-imports mayapy runtime wheel contract_runtime report:
+    vx uv run --offline --no-project --no-sync -- "{{mayapy}}" -B scripts/check_maya_gui_runtime.py "{{runtime}}" "{{wheel}}" "{{contract_runtime}}" "{{report}}"
+
 # Public wheel only: verify SHA256 before installing into an empty directory.
 maya-contract-runtime mayapy target wheel_url sha256:
     vx uv run --no-project --python 3.11 scripts/prepare_maya_contract.py "{{mayapy}}" "{{target}}" "{{wheel_url}}" "{{sha256}}"
@@ -46,3 +53,7 @@ verify-package archive="dist/maya-outliner-0.1.0-test.zip":
 # Refresh the lockfile within declared compatible dependency ranges.
 update:
     vx npm update
+
+# Existing interpreter, with no package resolution or runtime installation.
+test-local python:
+    vx uv run --offline --no-project --no-sync -- "{{python}}" -B -m pytest -c pytest.ini -p no:cacheprovider tests -q

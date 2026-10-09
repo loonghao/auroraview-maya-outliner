@@ -33,10 +33,19 @@ tools.close()  # close remaining consumers and their subscriptions
 ```
 
 `host_subscribe(event, callback)` is optional and must return an unsubscribe
-callable. The host owns this event source. Both the view's call dispatcher and
+callable. Unsubscribe must finish synchronously and raise if cleanup fails; the
+public preview does not treat a false return or an awaitable as failure. The
+host owns this event source. Both the view's call dispatcher and
 Core's execution bridge must dispatch to the thread that created the owner.
 The factory neither starts nor stops a service or dispatcher. The existing
 tutorial's `api.*` UI routes remain available; adopting `scene.*` is explicit.
+
+The panel accepts a borrowed owner with `outliner.run(tools=tools)`. Its legacy
+`api.rename_node` route then calls the same `scene.rename` schema and handler.
+`MayaOutliner(dockable=True)` opts into a native Maya workspace control; the
+default dialog remains available. See the [README](../README.md#optional-native-dock-and-shared-rename)
+for the pinned public GUI runtime and usage. These options are implemented;
+interactive rendering, docking, input and DPI acceptance remain pending.
 
 ## Standalone Maya consumer gate
 
@@ -95,5 +104,7 @@ and Core 0.20.41. The [receipt](receipts/maya-contract-preview-1.json) records t
 discovery pages (32 + 10 tools), real rename/readback/Undo, unload, stale refusal
 and cleanup. Its import paths are relative to the isolated runtime; the local
 receipt retains the full paths. This accepts the standalone scene-tool path.
-The stock Vue panel still uses `api.rename_node`; shared GUI binding, WebView
-rendering and docking remain unaccepted. See [validation](VALIDATION.md).
+The stock Vue panel retains `api.rename_node`; the opt-in borrowed owner shares
+that rename contract and the native docking candidate is implemented. The
+standalone receipt does not establish GUI rendering, docking or input. See
+[validation](VALIDATION.md) for the pending interactive checks.

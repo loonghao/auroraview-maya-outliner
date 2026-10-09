@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, provide, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, provide, watch, nextTick } from 'vue'
 import OutlinerTree from './components/OutlinerTree.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import Toolbar from './components/Toolbar.vue'
@@ -213,10 +213,10 @@ onMounted(async () => {
   try {
     const hierarchy = await getSceneHierarchy()
     sceneData.value = hierarchy
-    isConnected.value = true
     const selected = await callAPI<string[]>('get_selection')
     selectedNodes.value = new Set(selected)
     selectedNode.value = selected[selected.length - 1] || null
+    isConnected.value = true
   } catch (error) {
     console.error('[App] Failed to load scene hierarchy:', error)
   }
@@ -276,6 +276,13 @@ onMounted(async () => {
 
   // Keyboard shortcuts
   window.addEventListener('keydown', handleKeyDown)
+
+  // Complete the handshake after Vue has rendered the initial host snapshot
+  // and installed its subscriptions. Loading the HTML alone is insufficient.
+  if (isConnected.value) {
+    await nextTick()
+    await callAPI('frontend_ready')
+  }
 })
 
 onBeforeUnmount(() => {

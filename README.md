@@ -5,10 +5,9 @@ A runnable tutorial for building a scene tool with Vue inside Maya. The frontend
 [中文教程](README_zh.md) · [AuroraView](https://github.com/try-auroraview/auroraview) · [Organization website](https://try-auroraview.github.io/) · [Validation](docs/VALIDATION.md) · [Origin and rights](docs/PROVENANCE.md)
 
 [Shared UI and agent tools](docs/SHARED_TOOLS.md) adds an explicit ToolSet factory
-and a separate public-wheel Maya standalone consumer gate. `create_tools()` and
-`tools.bind()` are opt-in: the stock Vue panel still calls the legacy
-`api.rename_node` route and does not yet use the shared rename schema. Real GUI
-binding and interactive WebView behavior have not been accepted.
+and a separate public-wheel Maya standalone consumer gate. Shared tools and
+native docking are explicit options; the default panel keeps its legacy routes.
+Interactive WebView, docking and input acceptance remain pending.
 
 This is the original **Maya Outliner Example**, moved from Long Hao's repository with its history intact. It is separate from the [Maya host adapter](https://github.com/try-auroraview/auroraview-maya).
 
@@ -71,6 +70,42 @@ outliner = main(use_local=True)
 
 For hot reload, run `vx just dev` in a separate terminal, then use `main(url="http://127.0.0.1:5173")` in a fresh outliner instance.
 
+### Optional native dock and shared rename
+
+For the fixed **Windows x64 / Maya 2026** GUI candidate, install AuroraView 0.5.12,
+QtPy 2.4.3 and packaging 25.0 with their published hashes:
+
+```powershell
+vx just maya-gui-runtime "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe" ".maya-gui-runtime"
+```
+
+Prepare `.maya-contract-runtime` using the [verified public contract wheel recipe](docs/SHARED_TOOLS.md).
+Start a fresh Maya session after changing native dependencies. With `repo` set as
+above, add both targets before importing AuroraView:
+
+```python
+sys.path[:0] = [str(repo / ".maya-gui-runtime"), str(repo / ".maya-contract-runtime"), str(repo)]
+from auroraview_maya_outliner import MayaOutliner
+from auroraview_maya_outliner.tools import create_tools
+
+outliner = MayaOutliner(dockable=True)
+tools = create_tools(outliner.api)
+outliner.run(use_local=True, tools=tools)
+```
+
+The optional dock uses Maya's native `workspaceControl`. Passing `tools` makes
+the Vue rename action use the same schema, handler and scene readback as
+`scene.rename`. Attach that ToolSet to the host's existing Core server separately;
+the host supplies its main-thread dispatcher. Closing the panel releases its UI
+binding, callbacks and view while preserving the ToolSet and borrowed service.
+Call `tools.close()` when the owning tool is unloaded.
+
+`vx just maya-gui-imports <mayapy> <gui-target> <downloaded-native-wheel> <contract-target> <report>`
+checks isolated public imports and installed bytes against the
+[fixed native wheel](https://github.com/try-auroraview/auroraview/releases/download/auroraview-v0.5.12/auroraview-0.5.12-cp38-abi3-win_amd64.whl)
+without creating a GUI. Interactive pixels, native docking, keyboard/mouse input,
+Undo/events and DPI behavior still require the project's DCC-CUA acceptance.
+
 ## 4. Try a small scene
 
 The following adds a group and two objects to the current scene; it does not reset your scene:
@@ -125,7 +160,12 @@ AuroraView focuses on modern Web interfaces, rendering and native host docking. 
 
 The intended ownership rule is to attach to an existing host service when available. A panel releases its own subscriptions and tasks on close, and shuts down a service only when it owns that service. Page actions and explicitly registered agent tools should call the same host business capabilities.
 
-This shared runtime integration is **planned, not delivered by this demo**. The current tutorial uses a Maya-parented Qt dialog and its own scene callbacks; native Maya docking and DCC-MCP service attachment are not implemented or certified here. It does not define a new Core API or automatically expose the interface as agent tools.
+The default tutorial uses a Maya-parented Qt dialog and its own scene callbacks.
+The explicit options above provide a native dock and borrowed shared tools;
+automatic host service discovery remains outside this demo. The existing
+standalone consumer gate does not certify interactive WebView or docking.
+The demo does not define a new Core API or automatically expose interface methods
+as agent tools.
 
 ## Close and verify cleanup
 
@@ -135,7 +175,7 @@ assert not outliner._callbacks.ids
 outliner = main(use_local=True)
 ```
 
-Closing with the window's close button uses the same cleanup path: stop the refresh timer, unregister Maya callbacks, destroy the WebView, and release the instance registry. The Vue composable also removes its event subscriptions on unmount.
+Closing with the window's close button uses the same cleanup path: stop the refresh timer, unregister Maya callbacks, destroy the WebView, and release the instance registry. Failed cleanup retains its owner and resources for another `outliner.close()` attempt. The Vue composable also removes its event subscriptions on unmount.
 
 ## Tests and source archive
 

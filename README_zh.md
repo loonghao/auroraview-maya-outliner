@@ -65,6 +65,38 @@ outliner = main(use_local=True)
 
 开发时另开终端执行 `vx just dev`，关闭已有 outliner 后使用 `main(url="http://127.0.0.1:5173")`，即可使用 Vite 热更新。
 
+### 可选：原生停靠与共享重命名
+
+固定的 **Windows x64 / Maya 2026** GUI 候选使用 AuroraView 0.5.12、QtPy 2.4.3
+和 packaging 25.0，并验证发布者提供的哈希：
+
+```powershell
+vx just maya-gui-runtime "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe" ".maya-gui-runtime"
+```
+
+按[公开契约 wheel 的安装步骤](docs/SHARED_TOOLS.md)准备 `.maya-contract-runtime`。
+更换原生依赖后使用新的 Maya 会话。像上文一样设置 `repo`，在导入 AuroraView 前加入两个运行目录：
+
+```python
+sys.path[:0] = [str(repo / ".maya-gui-runtime"), str(repo / ".maya-contract-runtime"), str(repo)]
+from auroraview_maya_outliner import MayaOutliner
+from auroraview_maya_outliner.tools import create_tools
+
+outliner = MayaOutliner(dockable=True)
+tools = create_tools(outliner.api)
+outliner.run(use_local=True, tools=tools)
+```
+
+可选停靠使用 Maya 原生 `workspaceControl`。传入 `tools` 后，Vue 重命名动作与
+`scene.rename` 共用同一份 schema、处理函数和场景读回。需要 Agent 调用时，将这份
+ToolSet 单独附着到宿主已有的 Core 服务，由宿主提供主线程调度。关闭面板只释放 UI
+绑定、回调和视图，保留 ToolSet 与借用的服务；工具所有者卸载时再调用 `tools.close()`。
+默认入口仍使用原来的 Qt 对话框与页面路由。
+
+`vx just maya-gui-imports <mayapy> <gui-target> <downloaded-native-wheel> <contract-target> <report>`
+会核对隔离导入，并将安装文件与[固定原生 wheel](https://github.com/try-auroraview/auroraview/releases/download/auroraview-v0.5.12/auroraview-0.5.12-cp38-abi3-win_amd64.whl)
+逐字节比较，不创建 GUI。真实页面像素、原生停靠、键鼠输入、Undo/事件和 DPI 行为仍需通过项目自有 DCC-CUA 实机验收。
+
 ## 4. 创建小场景并演示
 
 下面只向当前场景添加对象，不会重置场景：
@@ -112,7 +144,7 @@ AuroraView 专注现代 Web 界面、渲染与原生宿主停靠。计划中的�
 
 资源归属原则是优先附着宿主已有服务。面板关闭时只释放自己创建的订阅和任务，只有服务由面板拥有时才关闭服务。页面动作和显式注册的 Agent 工具应复用同一份宿主业务能力。
 
-这项共享运行时整合**仍是计划，本示例尚未交付**。当前教程使用以 Maya 为父窗口的 Qt 对话框和自有场景回调；原生 Maya 停靠与 DCC-MCP 服务附着尚未实现或验收。本示例不另造 Core API，也不会自动把界面暴露成 Agent 工具。
+默认教程仍使用以 Maya 为父窗口的 Qt 对话框和自有场景回调。上面的显式选项提供原生停靠与借用的共享工具；自动发现宿主服务不在本示例范围内。已有 standalone 验证不证明 GUI/WebView 或原生停靠已通过交互验收。本示例不另造 Core API，也不会自动把界面方法暴露成 Agent 工具。
 
 ## 关闭与清理
 
@@ -122,7 +154,7 @@ assert not outliner._callbacks.ids
 outliner = main(use_local=True)
 ```
 
-点击窗口关闭按钮也执行同样的清理：停止刷新定时器、移除 Maya 回调、销毁 WebView、释放实例登记。Vue composable 会在组件卸载时取消事件订阅。
+点击窗口关闭按钮也执行同样的清理：停止刷新定时器、移除 Maya 回调、销毁 WebView、释放实例登记。清理失败时保留所有者和未释放资源，可再次调用 `outliner.close()` 重试。Vue composable 会在组件卸载时取消事件订阅。
 
 ## 测试和示例包
 
