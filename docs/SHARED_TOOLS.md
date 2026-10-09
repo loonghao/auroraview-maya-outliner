@@ -27,16 +27,35 @@ agent = tools.attach(existing_core_server)
 # MCP name: agent.method_names['scene.rename']
 # MCP arguments: {"params": {"old_name": "|group|before", "new_name": "after"}}
 
-agent.close()  # unload these tools; the borrowed server remains running
 ui.close()     # revoke this panel's routes
-tools.close()  # close remaining consumers and their subscriptions
+# A replacement UI can borrow tools while this same agent remains attached.
+ui = tools.bind(replacement_webview)
+tools.close()  # final host/plugin unload; closes all consumers and subscriptions
 ```
 
 `host_subscribe(event, callback)` is optional and must return an unsubscribe
-callable. The host owns this event source. Both the view's call dispatcher and
+callable. Unsubscribe must finish synchronously and raise if cleanup fails; the
+public preview does not treat a false return or an awaitable as failure. The
+host owns this event source. Both the view's call dispatcher and
 Core's execution bridge must dispatch to the thread that created the owner.
 The factory neither starts nor stops a service or dispatcher. The existing
 tutorial's `api.*` UI routes remain available; adopting `scene.*` is explicit.
+
+The panel accepts a borrowed owner with `outliner.run(tools=tools)`. Its legacy
+`api.rename_node` route then calls the same `scene.rename` schema and handler.
+`MayaOutliner(dockable=True)` opts into a native Maya workspace control; the
+default dialog remains available. See the [README](../README.md#optional-native-dock-and-shared-rename)
+for the pinned public GUI runtime and usage. These options are implemented;
+interactive rendering, docking, input and DPI acceptance remain pending.
+
+`OutlinerRuntime(existing_core_server, dockable=True)` provides this ownership
+boundary for the demo: retain it in the host/plugin, call `open()` and
+`close_view()` for panel generations, and call `close()` only at final unload.
+It retains one SceneAPI, ToolSet and AgentBinding and forwards scene refreshes
+to the current panel. Closed UI routes reject before scene reads or mutations.
+Public Core 0.20.41 retains unloaded catalog entries, so final close followed
+by a new same-name owner on the same server is unsupported; no catalog deletion
+or renamed-namespace workaround is performed.
 
 ## Standalone Maya consumer gate
 
@@ -95,5 +114,7 @@ and Core 0.20.41. The [receipt](receipts/maya-contract-preview-1.json) records t
 discovery pages (32 + 10 tools), real rename/readback/Undo, unload, stale refusal
 and cleanup. Its import paths are relative to the isolated runtime; the local
 receipt retains the full paths. This accepts the standalone scene-tool path.
-The stock Vue panel still uses `api.rename_node`; shared GUI binding, WebView
-rendering and docking remain unaccepted. See [validation](VALIDATION.md).
+The stock Vue panel retains `api.rename_node`; the opt-in borrowed owner shares
+that rename contract and the native docking candidate is implemented. The
+standalone receipt does not establish GUI rendering, docking or input. See
+[validation](VALIDATION.md) for the pending interactive checks.

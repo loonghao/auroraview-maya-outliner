@@ -1,0 +1,4 @@
+# Fixed Windows x64 / Maya 2026 GUI candidate. Maya supplies PySide6/shiboken6.
+auroraview @ https://github.com/try-auroraview/auroraview/releases/download/auroraview-v0.5.12/auroraview-0.5.12-cp38-abi3-win_amd64.whl --hash=sha256:e30ac11fad4acd7f24aa29e8599be9fb4c99ea7a92211909b8e379be4dd72ab7
+QtPy==2.4.3 --hash=sha256:72095afe13673e017946cc258b8d5da43314197b741ed2890e563cf384b51aa1
+packaging==25.0 --hash=sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484

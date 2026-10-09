@@ -11,7 +11,12 @@ Evidence is tracked separately for source, builds and native interaction. A pass
 | Native Maya scene smoke | Passed on Maya 2026 on 2026-10-09 via `vx just maya-smoke "<Maya>/bin/mayapy.exe"`: hierarchy, duplicate DAG names, selection, multiple/empty selection, visibility and callback registration/removal. All 10 registered callbacks were released. |
 | Shared ToolSet preparation | Passed on 2026-10-09: 46 ordinary tests and 7 factory tests against the verified public preview wheel. Factory schema/handler reuse, UI/session lifetimes, worker-thread refusal, artifact checks and complete tools/list pagination are covered. See [shared tools](SHARED_TOOLS.md). |
 | Public contract wheel in native Maya | Passed on Maya 2026 / Python 3.11.9 with public contract preview 0.1.0 and Core 0.20.41: actual HTTP/MCP discovery across 32 + 10 tools, rename/readback/Undo, binding unload/stale refusal, borrowed server survival, all 10 callbacks removed, endpoint/registry cleanup. See the [receipt](receipts/maya-contract-preview-1.json). |
-| Interactive Maya/WebView demo | Not yet recorded for the migrated revision. Requires interactive Maya, the matching AuroraView wheel/qtpy, WebView2 Runtime, and a verified launch/selection/visibility/close cycle. |
+| Opt-in GUI preparation | Passed on 2026-10-09: 76 source tests and TypeScript/Vite production build. Tests cover native parent-before-WebView order, borrowed ToolSet routes, readiness and retryable cleanup failures. |
+| Retained host-owner preparation | Passed on 2026-10-09: 94 source tests and TypeScript/Vite production build. Tests use the public contract 0.1.0 with controlled Core/Qt/Maya boundaries: one attachment across view generations, stale UI refusal before host reads, current-view refresh, partial startup and cleanup retry. This is not real Maya reopen acceptance. |
+| Partial interactive Maya evidence | Recorded on 2026-10-09 at source `f1231286`: frontend ready, native workspace creation, selection, MCP/UI rename readback, Undo and cleanup. The CSS-only `434822e3` follow-up confirmed row anchoring and visible input. These are separate from the later retained-owner source candidate; see the [sanitized receipt](receipts/maya-gui-partial-2026-10-09.json). |
+| Public binding compatibility | Passed with the verified AuroraView 0.5.12 Python binding code, an accumulating IPC test double and a controlled scene fixture: one rename route/invocation/result, schema refusal before business code and fixture readback. This source-level check creates no GUI or native IPC transport. |
+| Pinned public GUI runtime imports | Passed in Maya 2026 / Python 3.11.9: AuroraView 0.5.12, QtPy 2.4.3 and packaging 25.0 with contract 0.1.0 / Core 0.20.41. All 110 installed AuroraView files matched the SHA256-verified public wheel. No QApplication or GUI was created. |
+| Interactive Maya/WebView demo | Opt-in shared GUI binding and native docking candidate implemented; interactive rendering, docking, keyboard/pointer input, DPI and repeated close/reopen acceptance remain pending. Requires an interactive Maya session and WebView2 Runtime. |
 | Other Maya versions / operating systems | Not certified by this migration. |
 
 Installed interpreters observed locally on 2026-10-08 include Maya 2025 and 2026. Installation discovery is not a runtime pass.
@@ -19,7 +24,22 @@ Installed interpreters observed locally on 2026-10-08 include Maya 2025 and 2026
 Dependency audit after the compatible update reported zero advisories across 108
 packages. This is a dependency snapshot, not a complete security assessment.
 
-The scene-only smoke gate does not import or render AuroraView. The matching
-runtime and Qt binding still need installation before interactive acceptance.
+The scene-only smoke gate does not import or render AuroraView. The separate
+pinned public import gate confirms runtime compatibility without rendering a
+view. Follow the [README](../README.md#optional-native-dock-and-shared-rename)
+to prepare the fixed GUI runtime and opt into docking or shared tools.
 
-For interactive acceptance, open the demo using the README, verify both directions of selection (including duplicate leaf names), multiple and empty selection, visibility, rename, resize and repeated close/reopen. Record the exact Git commit, Maya/Python/AuroraView versions and test output. Use the project's DCC-CUA route for UI automation.
+For interactive acceptance, open the demo using the README, verify both directions of selection (including duplicate leaf names), multiple and empty selection, visibility, rename, resize and repeated close/reopen. Record the exact Git commit, Maya/Python/AuroraView versions and test output. Use the project's DCC-CUA route for UI automation. The optional `scripts/maya_gui_probe.py` harness borrows the existing Core server and records main-thread ownership, ready state, native window identities and retryable cleanup; its report remains awaiting interactive acceptance until the UI checks are recorded.
+
+For the bounded reopen gate, retain one `GuiProbe` and host-owned runtime:
+`start()`, wait for frontend readiness, capture the first UI binding, call
+`close_view()`, verify callbacks/workspace are released and the original agent
+still reads the scene, then call `open_view()`. Require the same ToolSet and
+AgentBinding, a new view generation, old UI routes raising `ClosedError`, new
+readiness, MCP rename/readback updating only the current panel, and native
+docking/input readback. Finally call `close()` and verify the owned fixture and
+selection are restored while the borrowed server and unrelated skills survive.
+Stop on an observation timeout; do not recreate the tool owner to bypass it.
+Real Maya acceptance of this retained-owner lifecycle remains pending. Full
+same-name owner recreation after final close is unsupported by public Core
+0.20.41 because its catalog metadata remains registered.
