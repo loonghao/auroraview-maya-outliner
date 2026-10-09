@@ -1,6 +1,7 @@
 """Qt-hosted Maya Outliner. Run main() inside Maya's Script Editor."""
 
 from pathlib import Path
+from functools import wraps
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -28,7 +29,7 @@ class MayaOutliner:
 
     _instances = {}
 
-    def __init__(self, singleton_key="maya-outliner", context_menu=False, dockable=False):
+    def __init__(self, singleton_key="maya-outliner", context_menu=False, dockable=False, *, api=None):
         self._singleton_key = singleton_key
         self._context_menu = context_menu
         self._dockable = dockable
@@ -40,7 +41,7 @@ class MayaOutliner:
         self._callbacks = None
         self._cleanup_pending = None
         self._closing = False
-        self.api = SceneAPI(on_change=self._schedule_scene_update)
+        self.api = api if api is not None else SceneAPI(on_change=self._schedule_scene_update)
 
     def run(self, url=None, use_local=False, tools=None):
         self.api._check_thread()
@@ -98,9 +99,9 @@ class MayaOutliner:
         )
         layout.addWidget(self.webview)
         self._bind_tools(tools)
-        self.webview.bind_call("api.resize_window", self.resize_window)
-        self.webview.bind_call("api.get_window_size", self.get_window_size)
-        self.webview.bind_call("api.frontend_ready", self.frontend_ready)
+        self.webview.bind_call("api.resize_window", self._guard_ui(self.resize_window))
+        self.webview.bind_call("api.get_window_size", self._guard_ui(self.get_window_size))
+        self.webview.bind_call("api.frontend_ready", self._guard_ui(self.frontend_ready))
         self._scene_timer = QTimer(self.dialog)
         self._scene_timer.setSingleShot(True)
         self._scene_timer.setInterval(50)
@@ -133,13 +134,27 @@ class MayaOutliner:
                 )["result"]
 
             routes = SimpleNamespace(**{
-                name: getattr(self.api, name) for name in dir(self.api)
+                name: self._guard_ui(getattr(self.api, name)) for name in dir(self.api)
                 if not name.startswith("_") and callable(getattr(self.api, name))
             })
             routes.rename_node = rename
         # Public AuroraView 0.5.12 accumulates handlers on rebind. Select the
         # shared rename before registering any legacy route, never afterward.
         self.webview.bind_api(routes)
+
+    def _guard_ui(self, handler):
+        """A closed view cannot reuse host-owned scene or window handlers."""
+        binding = self._ui_binding
+        if binding is None:
+            return handler
+
+        @wraps(handler)
+        def call(*args, **kwargs):
+            # Public, host-independent lease validation; no scene read occurs.
+            binding.list_tools()
+            return handler(*args, **kwargs)
+
+        return call
 
     def frontend_ready(self):
         """Acknowledge the Vue mount, initial scene read and event subscription."""

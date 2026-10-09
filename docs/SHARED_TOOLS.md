@@ -27,9 +27,10 @@ agent = tools.attach(existing_core_server)
 # MCP name: agent.method_names['scene.rename']
 # MCP arguments: {"params": {"old_name": "|group|before", "new_name": "after"}}
 
-agent.close()  # unload these tools; the borrowed server remains running
 ui.close()     # revoke this panel's routes
-tools.close()  # close remaining consumers and their subscriptions
+# A replacement UI can borrow tools while this same agent remains attached.
+ui = tools.bind(replacement_webview)
+tools.close()  # final host/plugin unload; closes all consumers and subscriptions
 ```
 
 `host_subscribe(event, callback)` is optional and must return an unsubscribe
@@ -46,6 +47,15 @@ The panel accepts a borrowed owner with `outliner.run(tools=tools)`. Its legacy
 default dialog remains available. See the [README](../README.md#optional-native-dock-and-shared-rename)
 for the pinned public GUI runtime and usage. These options are implemented;
 interactive rendering, docking, input and DPI acceptance remain pending.
+
+`OutlinerRuntime(existing_core_server, dockable=True)` provides this ownership
+boundary for the demo: retain it in the host/plugin, call `open()` and
+`close_view()` for panel generations, and call `close()` only at final unload.
+It retains one SceneAPI, ToolSet and AgentBinding and forwards scene refreshes
+to the current panel. Closed UI routes reject before scene reads or mutations.
+Public Core 0.20.41 retains unloaded catalog entries, so final close followed
+by a new same-name owner on the same server is unsupported; no catalog deletion
+or renamed-namespace workaround is performed.
 
 ## Standalone Maya consumer gate
 

@@ -155,7 +155,7 @@ def test_failed_startup_retains_singleton_when_rollback_needs_retry(monkeypatch)
 
 def test_shared_run_registers_each_legacy_route_once_without_rebinding(host):
     host.scene.rename_node = Mock()
-    binding = SimpleNamespace(call=Mock(return_value={"result": {"ok": True, "node": "|after"}}))
+    binding = SimpleNamespace(list_tools=Mock(), call=Mock(return_value={"result": {"ok": True, "node": "|after"}}))
     tools = SimpleNamespace(bind=Mock(return_value=binding))
     panel = maya_outliner.MayaOutliner().run(use_local=True, tools=tools)
     assert all(len(handlers) == 1 for handlers in panel.webview.routes.values())

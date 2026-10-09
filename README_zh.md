@@ -93,6 +93,22 @@ ToolSet 单独附着到宿主已有的 Core 服务，由宿主提供主线程调
 绑定、回调和视图，保留 ToolSet 与借用的服务；工具所有者卸载时再调用 `tools.close()`。
 默认入口仍使用原来的 Qt 对话框与页面路由。
 
+宿主已有 Core 服务时，在宿主或插件中保留同一个运行时所有者：
+
+```python
+from auroraview_maya_outliner import OutlinerRuntime
+
+owner = OutlinerRuntime(existing_core_server, dockable=True)
+outliner = owner.open(use_local=True)
+owner.close_view()                    # 只释放这一代面板资源
+outliner = owner.open(use_local=True)  # 复用原有 ToolSet 和 AgentBinding
+owner.close()                         # 仅在宿主或插件最终卸载时调用
+```
+
+`existing_core_server` 和主线程调度由宿主提供。点击原生面板关闭按钮也保留此所有者。
+最终调用 `owner.close()` 后，公开 Core 0.20.41 仍保留目录元数据，不支持在同一服务上
+重新创建同名所有者。保留所有者后重新打开视图已有源码测试，真实 Maya 关闭再打开验收仍待完成。
+
 `vx just maya-gui-imports <mayapy> <gui-target> <downloaded-native-wheel> <contract-target> <report>`
 会核对隔离导入，并将安装文件与[固定原生 wheel](https://github.com/try-auroraview/auroraview/releases/download/auroraview-v0.5.12/auroraview-0.5.12-cp38-abi3-win_amd64.whl)
 逐字节比较，不创建 GUI。真实页面像素、原生停靠、键鼠输入、Undo/事件和 DPI 行为仍需通过项目自有 DCC-CUA 实机验收。

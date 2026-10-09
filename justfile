@@ -45,7 +45,7 @@ maya-contract mayapy runtime report=".build/maya-contract-acceptance.json":
 
 # The supplied wheel may be local during development; this is not a host gate.
 test-contracts wheel:
-    vx uv run --no-project --python 3.11 --with pytest --with "{{wheel}}" pytest -c pytest.ini tests/test_tools.py -q
+    vx uv run --no-project --python 3.11 --with pytest --with "{{wheel}}" pytest -c pytest.ini tests/test_tools.py tests/test_runtime.py -q
 
 verify-package archive="dist/maya-outliner-0.1.0-test.zip":
     vx uv run --no-project --python 3.11 scripts/verify_package.py "{{archive}}"

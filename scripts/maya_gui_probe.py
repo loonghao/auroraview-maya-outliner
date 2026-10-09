@@ -8,6 +8,7 @@ import importlib.metadata
 import json
 import os
 import threading
+from functools import wraps
 from pathlib import Path
 from uuid import uuid4
 
@@ -45,58 +46,133 @@ class GuiProbe:
         self.threads = []
         self.previous_selection = cmds.ls(selection=True, long=True) or []
         self.root = None
-        self.panel = self.tools = self.agent = None
+        self.owner = None
         self.workspace = None
+        self.view_generation = 0
+        self._stable_tools = self._stable_agent = None
+        self._view_cleanup = None
+        self._fixture_restored = False
+
+    @property
+    def panel(self):
+        return self.owner.panel if self.owner is not None else None
+
+    @property
+    def tools(self):
+        return self.owner.tools if self.owner is not None else None
+
+    @property
+    def agent(self):
+        return self.owner.agent if self.owner is not None else None
 
     def start(self):
-        """Create only a disposable fixture and a docked panel; do not reset the scene."""
-        from auroraview_maya_outliner import MayaOutliner
-        from auroraview_maya_outliner.tools import create_tools
-
+        """Create one disposable fixture and retain its host-owned tool runtime."""
         assert threading.get_ident() == self.main_thread
+        from auroraview_maya_outliner import OutlinerRuntime
+        if self.owner is not None:
+            return self.open_view()
         try:
             self.root = self.cmds.group(empty=True, name="av_gui_" + uuid4().hex[:12])
             self.cmds.createNode("transform", name="before", parent=self.root)
             self.cmds.select(self.root + "|before", replace=True)
-            self.panel = MayaOutliner(singleton_key=self.root, dockable=True)
+            self.owner = OutlinerRuntime(self.server, commands=self.cmds, singleton_key=self.root, dockable=True)
             for name in ("rename_node", "get_scene_hierarchy", "get_selection", "select_multiple_nodes"):
                 self._observe(name)
-            self.tools = create_tools(self.panel.api)
-            self.agent = self.tools.attach(self.server)
-            self.panel.run(use_local=True, tools=self.tools)
-            self.workspace = self.panel.dialog.objectName() + "WorkspaceControl"
         except Exception:
             self.close()
             raise
+        return self.open_view()
+
+    def open_view(self, url=None, use_local=True):
+        """Open a new UI generation without replacing its tools or agent binding."""
+        assert threading.get_ident() == self.main_thread
+        if self.owner is None or self.owner.closed:
+            raise RuntimeError("Start a live probe runtime before opening its view")
+        if self._view_cleanup is not None:
+            raise RuntimeError("Previous view cleanup is pending. Retry close_view() first.")
+        previous = self.panel
+        panel = self.owner.open(url=url, use_local=use_local)
+        if self._stable_tools is None:
+            self._stable_tools, self._stable_agent = self.tools, self.agent
+        else:
+            assert self.tools is self._stable_tools and self.agent is self._stable_agent
+        if panel is not previous:
+            self.view_generation += 1
+        self.workspace = panel.dialog.objectName() + "WorkspaceControl"
+        return self.state()
+
+    def close_view(self):
+        """Release only this UI generation and verify the host owner is retained."""
+        assert threading.get_ident() == self.main_thread
+        if self.owner is None or self.owner.closed:
+            raise RuntimeError("The probe runtime is not live")
+        if self._view_cleanup is None and self.panel is not None:
+            self._view_cleanup = (self.panel, self.workspace)
+        try:
+            self.owner.close_view()
+            if self._view_cleanup is not None:
+                self._check_view_cleanup(*self._view_cleanup)
+            assert not self.tools.closed
+            assert self.tools is self._stable_tools and self.agent is self._stable_agent
+            assert self.server.is_running, "The borrowed Core service stopped during view cleanup"
+        except Exception as error:
+            self._write({
+                "status": "view-cleanup-failed", "source_commit": self.source_commit,
+                "view_generation": self.view_generation, "errors": [str(error)],
+                **self._retention(),
+            })
+            raise
+        self._view_cleanup = None
+        self.workspace = None
         return self.state()
 
     def _observe(self, name):
-        handler = getattr(self.panel.api, name)
+        handler = getattr(self.owner.scene, name)
 
+        @wraps(handler)
         def call(*args, **kwargs):
             self.threads.append(threading.get_ident())
             return handler(*args, **kwargs)
 
-        setattr(self.panel.api, name, call)
+        setattr(self.owner.scene, name, call)
+
+    def _retention(self):
+        return {
+            "tool_owner_id": getattr(self.tools, "id", None),
+            "tool_owner_retained": self.tools is not None and self.tools is self._stable_tools and not self.tools.closed,
+            "agent_binding_retained": self.agent is not None and self.agent is self._stable_agent and not self.agent.closed,
+        }
+
+    def _check_view_cleanup(self, panel, workspace):
+        assert not (panel._callbacks and panel._callbacks.ids)
+        assert panel._ui_binding is None or panel._ui_binding.closed
+        assert not getattr(panel, "_cleanup_pending", [])
+        assert panel.webview is None and panel.dialog is None
+        if workspace:
+            assert not self.cmds.workspaceControl(workspace, query=True, exists=True)
 
     def state(self):
         """Typed host readback; invoke only after the exact DCC-CUA target is bound."""
-        from auroraview_maya_outliner.maya_outliner import _maya_main_window
-
         assert threading.get_ident() == self.main_thread
+        from auroraview_maya_outliner.maya_outliner import _maya_main_window
+        if self.tools is None or self.tools.closed or self.agent is None:
+            raise RuntimeError("The probe runtime is not live")
         scene = self.tools.call("scene.snapshot")
         assert self.threads and set(self.threads) == {self.main_thread}
-        dock_exists = self.cmds.workspaceControl(self.workspace, query=True, exists=True)
+        panel = self.panel
+        dock_exists = bool(self.workspace and self.cmds.workspaceControl(self.workspace, query=True, exists=True))
         result = {
-            "status": "awaiting-interactive-acceptance", "source_commit": self.source_commit,
+            "status": "awaiting-interactive-acceptance" if panel else "view-closed", "source_commit": self.source_commit,
             "pid": os.getpid(), "main_hwnd": int(_maya_main_window().winId()),
-            "webview_hwnd": self.panel.webview.get_hwnd(),
+            "webview_hwnd": panel.webview.get_hwnd() if panel else None,
             "main_thread": self.main_thread, "handler_threads": sorted(set(self.threads)),
-            "frontend_ready": self.panel._frontend_ready,
+            "frontend_ready": bool(panel and panel._frontend_ready),
+            "view_generation": self.view_generation, "view_open": panel is not None,
+            **self._retention(),
             "workspace": self.workspace, "workspace_exists": dock_exists,
             "floating": self.cmds.workspaceControl(self.workspace, query=True, floating=True) if dock_exists else None,
-            "device_pixel_ratio": self.panel.dialog.devicePixelRatioF(),
-            "registered_callbacks": len(self.panel._callbacks.ids),
+            "device_pixel_ratio": panel.dialog.devicePixelRatioF() if panel else None,
+            "registered_callbacks": len(panel._callbacks.ids) if panel and panel._callbacks else 0,
             "scene": scene,
             "tools": dict(self.agent.method_names), "mcp_url": self.server.mcp_url,
             "native_wheel_sha256": NATIVE_SHA, "contract": self.artifact,
@@ -106,37 +182,26 @@ class GuiProbe:
         return result
 
     def close(self):
-        """Release this panel's bindings and nodes; preserve the borrowed Core service."""
+        """Close the host owner, then restore its fixture; retain failures for retry."""
         assert threading.get_ident() == self.main_thread
         errors = []
-        panel = self.panel
-        if panel:
+        if self.owner is not None:
+            if self._view_cleanup is None and self.panel is not None:
+                self._view_cleanup = (self.panel, self.workspace)
             try:
-                panel.close()
-                assert not (panel._callbacks and panel._callbacks.ids)
-                assert panel._ui_binding is None or panel._ui_binding.closed
-                assert not getattr(panel, "_cleanup_pending", [])
-                assert panel.webview is None and panel.dialog is None
-                assert self.tools is None or not self.tools.closed
-                assert self.server.is_running
-                if self.workspace:
-                    assert not self.cmds.workspaceControl(self.workspace, query=True, exists=True)
+                if not self.owner.closed:
+                    self.owner.close()
+                assert self.owner.closed
+                if self._view_cleanup is not None:
+                    self._check_view_cleanup(*self._view_cleanup)
             except Exception as error:
                 errors.append(error)
             else:
-                self.panel = None
-        for name in ("agent", "tools"):
-            resource = getattr(self, name)
-            if resource and not errors:
-                try:
-                    resource.close()
-                except Exception as error:
-                    errors.append(error)
-                else:
-                    setattr(self, name, None)
+                self._view_cleanup = None
+                self.workspace = None
         if not errors and not self.server.is_running:
             errors.append(RuntimeError("The borrowed Core service stopped during cleanup"))
-        if not errors:
+        if not errors and not self._fixture_restored:
             try:
                 if self.root and self.cmds.objExists(self.root):
                     self.cmds.delete(self.root)
@@ -146,11 +211,14 @@ class GuiProbe:
                     self.cmds.select(selection, replace=True)
                 else:
                     self.cmds.select(clear=True)
+                self._fixture_restored = True
             except Exception as error:
                 errors.append(error)
         result = {
             "status": "cleanup-failed" if errors else "cleanup-passed",
             "source_commit": self.source_commit, "borrowed_server_running": self.server.is_running,
+            "view_generation": self.view_generation,
+            "owner_closed": bool(self.owner and self.owner.closed),
             "errors": [str(error) for error in errors], "interactive_acceptance": "recorded-separately",
         }
         self._write(result)

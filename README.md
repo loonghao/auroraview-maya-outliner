@@ -100,6 +100,24 @@ the host supplies its main-thread dispatcher. Closing the panel releases its UI
 binding, callbacks and view while preserving the ToolSet and borrowed service.
 Call `tools.close()` when the owning tool is unloaded.
 
+For a host with an existing Core server, retain one runtime in the host/plugin:
+
+```python
+from auroraview_maya_outliner import OutlinerRuntime
+
+owner = OutlinerRuntime(existing_core_server, dockable=True)
+outliner = owner.open(use_local=True)
+owner.close_view()                    # releases only the panel generation
+outliner = owner.open(use_local=True)  # same ToolSet and AgentBinding
+owner.close()                         # final host/plugin unload
+```
+
+The host supplies `existing_core_server` and main-thread dispatch. Closing the
+native panel also preserves this owner. After final `owner.close()`, public
+Core 0.20.41 retains catalog metadata; creating another same-name owner on that
+server is unsupported. View reopening with the retained owner has source tests;
+real Maya close/reopen acceptance remains pending.
+
 `vx just maya-gui-imports <mayapy> <gui-target> <downloaded-native-wheel> <contract-target> <report>`
 checks isolated public imports and installed bytes against the
 [fixed native wheel](https://github.com/try-auroraview/auroraview/releases/download/auroraview-v0.5.12/auroraview-0.5.12-cp38-abi3-win_amd64.whl)
